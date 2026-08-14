@@ -1,0 +1,8 @@
+{
+  "name": "Ministers Connect",
+  "description": "Professional platform for connecting Christian ministers, managing ministry programmes, delegate registrations with passport photo capture, QR & barcode accredited confirmation letters, printable badges, live scanning desk, and complete site content, banners, write-ups & rights customizer.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
