@@ -44,6 +44,11 @@ export const SiteSettingsEditor: React.FC<SiteSettingsEditorProps> = ({
   const [newInstruction, setNewInstruction] = useState('');
   const [uploadError, setUploadError] = useState('');
 
+  // Keep formData synchronized if settings prop updates externally
+  React.useEffect(() => {
+    setFormData({ ...settings });
+  }, [settings]);
+
   const handleChange = <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };

@@ -1,4 +1,18 @@
-import { Programme, Registration, GalleryItem } from '../types';
+import { Programme, Registration, GalleryItem, AdminUser } from '../types';
+
+export const INITIAL_ADMINS: AdminUser[] = [
+  {
+    id: 'admin-owner-bukunmi',
+    name: 'Bukunmi Samuel',
+    email: 'asamuelbukunmi@gmail.com',
+    role: 'super_admin',
+    passcode: 'admin123',
+    createdAt: '2026-08-01',
+    isActive: true,
+    isPrimaryOwner: true,
+    phone: '+234 803 123 4567',
+  }
+];
 
 export const INITIAL_PROGRAMMES: Programme[] = [
   {

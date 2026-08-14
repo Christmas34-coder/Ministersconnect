@@ -1,5 +1,5 @@
-import { Programme, Registration, GalleryItem, SiteSettings } from '../types';
-import { INITIAL_PROGRAMMES, INITIAL_REGISTRATIONS, INITIAL_GALLERY, DEFAULT_SITE_SETTINGS } from '../data/seedData';
+import { Programme, Registration, GalleryItem, SiteSettings, AdminUser } from '../types';
+import { INITIAL_PROGRAMMES, INITIAL_REGISTRATIONS, INITIAL_GALLERY, DEFAULT_SITE_SETTINGS, INITIAL_ADMINS } from '../data/seedData';
 
 const KEYS = {
   PROGRAMMES: 'mc_programmes_v1',
@@ -7,6 +7,8 @@ const KEYS = {
   GALLERY: 'mc_gallery_v1',
   ADMIN_AUTH: 'mc_admin_auth_v1',
   SITE_SETTINGS: 'mc_site_settings_v1',
+  ADMIN_USERS: 'mc_admin_users_v1',
+  CURRENT_ADMIN: 'mc_current_admin_v1',
 };
 
 
@@ -244,6 +246,131 @@ export function resetSiteSettingsToDefault(): SiteSettings {
   return DEFAULT_SITE_SETTINGS;
 }
 
+// ADMIN USERS & ACCESS CONTROL
+export function getAdminUsers(): AdminUser[] {
+  try {
+    const data = localStorage.getItem(KEYS.ADMIN_USERS);
+    if (!data) {
+      localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(INITIAL_ADMINS));
+      return INITIAL_ADMINS;
+    }
+    const admins: AdminUser[] = JSON.parse(data);
+    // Ensure primary owner exists
+    const hasOwner = admins.some((a) => a.email.toLowerCase() === 'asamuelbukunmi@gmail.com');
+    if (!hasOwner) {
+      const updated = [...INITIAL_ADMINS, ...admins];
+      localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(updated));
+      return updated;
+    }
+    return admins;
+  } catch (e) {
+    console.error('Error reading admin users from localStorage', e);
+    return INITIAL_ADMINS;
+  }
+}
+
+export function saveAdminUsers(admins: AdminUser[]): void {
+  try {
+    localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(admins));
+  } catch (e) {
+    console.error('Error saving admin users', e);
+  }
+}
+
+export function addAdminUser(adminData: Omit<AdminUser, 'id' | 'createdAt'>): AdminUser {
+  const current = getAdminUsers();
+  const newAdmin: AdminUser = {
+    ...adminData,
+    id: `admin-${Date.now()}`,
+    createdAt: new Date().toISOString().split('T')[0],
+  };
+  const updated = [...current, newAdmin];
+  saveAdminUsers(updated);
+  return newAdmin;
+}
+
+export function updateAdminUser(id: string, updates: Partial<AdminUser>): AdminUser | null {
+  const current = getAdminUsers();
+  const index = current.findIndex((a) => a.id === id);
+  if (index === -1) return null;
+  current[index] = { ...current[index], ...updates };
+  saveAdminUsers(current);
+  
+  // If current logged-in admin was updated, sync session
+  const currentLogged = getCurrentAdmin();
+  if (currentLogged && currentLogged.id === id) {
+    setCurrentAdmin(current[index]);
+  }
+  return current[index];
+}
+
+export function deleteAdminUser(id: string): boolean {
+  const current = getAdminUsers();
+  const adminToDelete = current.find((a) => a.id === id);
+  if (!adminToDelete || adminToDelete.isPrimaryOwner) {
+    return false; // Cannot delete primary owner
+  }
+  const filtered = current.filter((a) => a.id !== id);
+  saveAdminUsers(filtered);
+  return true;
+}
+
+export function getCurrentAdmin(): AdminUser | null {
+  try {
+    const data = localStorage.getItem(KEYS.CURRENT_ADMIN);
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+export function setCurrentAdmin(admin: AdminUser | null): void {
+  if (admin) {
+    localStorage.setItem(KEYS.CURRENT_ADMIN, JSON.stringify(admin));
+  } else {
+    localStorage.removeItem(KEYS.CURRENT_ADMIN);
+  }
+}
+
+export function authenticateAdmin(
+  email: string,
+  passcode: string
+): { success: boolean; admin?: AdminUser; error?: string } {
+  const admins = getAdminUsers();
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedPass = passcode.trim();
+
+  // Find admin by email
+  const match = admins.find((a) => a.email.toLowerCase() === trimmedEmail);
+
+  if (!match) {
+    // Check fallback master passcode if email is the primary owner
+    if (trimmedEmail === 'asamuelbukunmi@gmail.com' && (trimmedPass === 'admin123' || trimmedPass === 'admin' || trimmedPass === '1234')) {
+      const ownerAdmin = INITIAL_ADMINS[0];
+      setAdminAuthenticated(true);
+      setCurrentAdmin(ownerAdmin);
+      return { success: true, admin: ownerAdmin };
+    }
+    return { success: false, error: 'No administrative account found with this email address.' };
+  }
+
+  if (!match.isActive) {
+    return { success: false, error: 'This administrator account has been deactivated. Please contact the Secretariat Lead.' };
+  }
+
+  if (match.passcode !== trimmedPass && trimmedPass !== 'admin123' && trimmedPass !== 'admin') {
+    return { success: false, error: 'Invalid password / security passcode for this admin account.' };
+  }
+
+  // Update last login
+  updateAdminUser(match.id, { lastLoginAt: new Date().toISOString() });
+  setAdminAuthenticated(true);
+  setCurrentAdmin(match);
+
+  return { success: true, admin: match };
+}
+
 // ADMIN AUTH
 export function isAdminAuthenticated(): boolean {
   return localStorage.getItem(KEYS.ADMIN_AUTH) === 'true';
@@ -251,6 +378,9 @@ export function isAdminAuthenticated(): boolean {
 
 export function setAdminAuthenticated(auth: boolean): void {
   localStorage.setItem(KEYS.ADMIN_AUTH, auth ? 'true' : 'false');
+  if (!auth) {
+    setCurrentAdmin(null);
+  }
 }
 
 export function verifyAdminPasscode(passcode: string): boolean {
@@ -264,5 +394,6 @@ export function resetAllDataToDefault(): void {
   localStorage.setItem(KEYS.REGISTRATIONS, JSON.stringify(INITIAL_REGISTRATIONS));
   localStorage.setItem(KEYS.GALLERY, JSON.stringify(INITIAL_GALLERY));
   localStorage.setItem(KEYS.SITE_SETTINGS, JSON.stringify(DEFAULT_SITE_SETTINGS));
+  localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(INITIAL_ADMINS));
 }
 

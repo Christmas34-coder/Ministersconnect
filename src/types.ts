@@ -41,6 +41,26 @@ export type ProgrammeCategory =
 
 export type RegistrationStatus = 'confirmed' | 'checked_in' | 'vip' | 'cancelled';
 
+export type AdminRole = 
+  | 'super_admin' 
+  | 'secretariat_admin' 
+  | 'registration_officer' 
+  | 'media_manager';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  passcode: string;
+  avatarUrl?: string;
+  createdAt: string;
+  lastLoginAt?: string;
+  isActive: boolean;
+  isPrimaryOwner?: boolean;
+  phone?: string;
+}
+
 export interface Speaker {
   id: string;
   name: string;
