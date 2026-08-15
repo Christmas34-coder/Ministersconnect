@@ -1,51 +1,56 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  UserPlus, 
-  Key, 
-  Mail, 
-  User, 
-  Trash2, 
-  Edit3, 
-  Check, 
-  X, 
-  Shield, 
-  Lock, 
-  CheckCircle2, 
+import {
+  ShieldCheck,
+  UserPlus,
+  X,
+  Shield,
+  CheckCircle2,
   AlertCircle,
-  Phone,
-  Clock,
-  Sparkles,
+  Edit3,
+  Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Check,
 } from 'lucide-react';
 import { AdminUser, AdminRole } from '../types';
-import { getAdminUsers, addAdminUser, updateAdminUser, deleteAdminUser, getCurrentAdmin } from '../utils/storage';
+import {
+  getAdminUsers,
+  addAdminUser,
+  updateAdminUser,
+  deleteAdminUser,
+} from '../utils/storage';
 
 interface AdminTeamManagerProps {
   currentLoggedInAdmin: AdminUser | null;
   onAdminsUpdated: () => void;
 }
 
-const ROLE_INFO: Record<AdminRole, { label: string; description: string; badgeColor: string }> = {
+const ROLE_INFO: Record<
+  AdminRole,
+  { label: string; description: string; badgeColor: string }
+> = {
   super_admin: {
     label: 'Super Admin (Full Access)',
-    description: 'Full administrative access to programmes, registrations, site customizer, financials, and team management.',
+    description:
+      'Full administrative access to programmes, registrations, site customizer, financials, and team management.',
     badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
   },
   secretariat_admin: {
     label: 'Secretariat Executive',
-    description: 'Manages ministry programmes, delegate registrations, official letters, and gallery archives.',
+    description:
+      'Manages ministry programmes, delegate registrations, official letters, and gallery archives.',
     badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
   },
   registration_officer: {
     label: 'Accreditation & Desk Officer',
-    description: 'Manages attendee check-ins, barcode/QR accreditation scanner, and badge printing.',
+    description:
+      'Manages attendee check-ins, barcode/QR accreditation scanner, and badge printing.',
     badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
   },
   media_manager: {
     label: 'Media & Gallery Manager',
-    description: 'Manages convocation photo archives, testimonies, and media releases.',
+    description:
+      'Manages programme photo archives, testimonies, and media releases.',
     badgeColor: 'bg-purple-100 text-purple-900 border-purple-300',
   },
 };
@@ -104,10 +109,12 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
       setFormError('Full name is required');
       return;
     }
+
     if (!email.trim() || !email.includes('@')) {
       setFormError('A valid administrative email address is required');
       return;
     }
+
     if (!passcode.trim() || passcode.trim().length < 4) {
       setFormError('Passcode/Password must be at least 4 characters long');
       return;
@@ -116,7 +123,9 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
     const trimmedEmail = email.trim().toLowerCase();
 
     // Check duplicate email
-    const existing = admins.find((a) => a.email.toLowerCase() === trimmedEmail && a.id !== editingAdmin?.id);
+    const existing = admins.find(
+      (a) => a.email.toLowerCase() === trimmedEmail && a.id !== editingAdmin?.id
+    );
     if (existing) {
       setFormError('An administrator with this email address already exists.');
       return;
@@ -156,7 +165,9 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
     const newStatus = !admin.isActive;
     updateAdminUser(admin.id, { isActive: newStatus });
     refreshAdmins();
-    setSuccessToast(`Account status for ${admin.name} set to ${newStatus ? 'Active' : 'Disabled'}.`);
+    setSuccessToast(
+      `Account status for ${admin.name} set to ${newStatus ? 'Active' : 'Disabled'}.`
+    );
     setTimeout(() => setSuccessToast(''), 3000);
   };
 
@@ -165,7 +176,11 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
       alert('The primary master super-admin account cannot be removed.');
       return;
     }
-    if (window.confirm(`Are you sure you want to remove administrator "${admin.name}" (${admin.email})?`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to remove administrator "${admin.name}" (${admin.email})?`
+      )
+    ) {
       deleteAdminUser(admin.id);
       refreshAdmins();
       setSuccessToast(`Administrator ${admin.name} removed.`);
@@ -174,7 +189,7 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6">
       {/* Toast */}
       {successToast && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between shadow-sm">
@@ -199,10 +214,10 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
             Administrative Team & Access Permissions
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-            You are logged in as the Super Admin. Create and manage administrative accounts for your secretariat team, assigning custom access roles.
+            You are logged in as the Super Admin. Create and manage administrative accounts for your
+            secretariat team, assigning custom access roles.
           </p>
         </div>
-
         <button
           onClick={handleOpenAdd}
           className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center gap-2 cursor-pointer shadow-md shrink-0"
@@ -228,11 +243,12 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-600 mt-0.5 font-medium">
-              Primary login email: <strong className="text-slate-900 font-mono">asamuelbukunmi@gmail.com</strong> • Full governance rights over this platform.
+              Primary login email:{' '}
+              <strong className="text-slate-900 font-mono">asamuelbukunmi@gmail.com</strong> •
+              Full governance rights over this platform.
             </p>
           </div>
         </div>
-
         <div className="text-xs text-amber-900 bg-white/80 px-3 py-1.5 rounded-lg border border-amber-200 font-medium">
           Protected Account
         </div>
@@ -289,7 +305,10 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
                             )}
                           </div>
                           <span className="text-[10px] text-slate-400 block">
-                            Added: {admin.createdAt} {admin.lastLoginAt ? `• Last active: ${new Date(admin.lastLoginAt).toLocaleDateString()}` : ''}
+                            Added: {admin.createdAt}{' '}
+                            {admin.lastLoginAt
+                              ? `• Last active: ${new Date(admin.lastLoginAt).toLocaleDateString()}`
+                              : ''}
                           </span>
                         </div>
                       </div>
@@ -297,7 +316,9 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
 
                     {/* Contact */}
                     <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-800 font-mono text-xs">{admin.email}</div>
+                      <div className="font-medium text-slate-800 font-mono text-xs">
+                        {admin.email}
+                      </div>
                       {admin.phone && (
                         <div className="text-[11px] text-slate-500">{admin.phone}</div>
                       )}
@@ -305,12 +326,14 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
 
                     {/* Role */}
                     <td className="py-3.5 px-4">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${roleMeta.badgeColor}`}>
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${roleMeta.badgeColor}`}
+                      >
                         {roleMeta.label}
                       </span>
                     </td>
 
-                    {/* Passcode (Hidden) */}
+                    {/* Passcode */}
                     <td className="py-3.5 px-4">
                       <div className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block">
                         ••••••••
@@ -342,7 +365,6 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
                         >
                           <Edit3 className="w-4 h-4 text-amber-700" />
                         </button>
-
                         {!admin.isPrimaryOwner && (
                           <button
                             onClick={() => handleDelete(admin)}
@@ -364,12 +386,12 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
 
       {/* Add / Edit Admin Modal */}
       {isAddModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
           onClick={() => setIsAddModalOpen(false)}
         >
-          <div 
-            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95"
+          <div
+            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
@@ -381,7 +403,7 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -446,13 +468,15 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white font-medium text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
                 >
                   <option value="super_admin">Super Admin (Full Platform Control)</option>
-                  <option value="secretariat_admin">Secretariat Executive (Programmes & Registrations)</option>
-                  <option value="registration_officer">Accreditation Officer (Scanner & Badges)</option>
+                  <option value="secretariat_admin">
+                    Secretariat Executive (Programmes & Registrations)
+                  </option>
+                  <option value="registration_officer">
+                    Accreditation Officer (Scanner & Badges)
+                  </option>
                   <option value="media_manager">Media Manager (Gallery & Photos)</option>
                 </select>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  {ROLE_INFO[role]?.description}
-                </p>
+                <p className="text-[11px] text-slate-500 mt-1">{ROLE_INFO[role]?.description}</p>
               </div>
 
               <div>
@@ -491,7 +515,9 @@ export const AdminTeamManager: React.FC<AdminTeamManagerProps> = ({
                   className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Check className="w-4 h-4" />
-                  <span>{editingAdmin ? 'Update Administrator' : 'Create Administrator'}</span>
+                  <span>
+                    {editingAdmin ? 'Update Administrator' : 'Create Administrator'}
+                  </span>
                 </button>
               </div>
             </form>

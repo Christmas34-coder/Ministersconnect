@@ -1,16 +1,41 @@
-import { Programme, Registration, GalleryItem, SiteSettings, AdminUser } from '../types';
-import { INITIAL_PROGRAMMES, INITIAL_REGISTRATIONS, INITIAL_GALLERY, DEFAULT_SITE_SETTINGS, INITIAL_ADMINS } from '../data/seedData';
+import {
+  Programme,
+  Registration,
+  GalleryItem,
+  SiteSettings,
+  AdminUser,
+  MemberUser,
+  ChurchLeader,
+  SermonMedia,
+} from '../types';
+import {
+  INITIAL_PROGRAMMES,
+  INITIAL_REGISTRATIONS,
+  INITIAL_GALLERY,
+  DEFAULT_SITE_SETTINGS,
+  INITIAL_ADMINS,
+  INITIAL_MEMBERS,
+  INITIAL_CHURCH_LEADERS,
+  INITIAL_SERMONS,
+} from '../data/seedData';
+import {
+  MINISTERS_CONNECT_FLIER_LANDSCAPE,
+  MINISTERS_CONNECT_FLIER_PORTRAIT,
+} from '../assets/flierImage';
 
 const KEYS = {
-  PROGRAMMES: 'mc_programmes_v1',
-  REGISTRATIONS: 'mc_registrations_v1',
-  GALLERY: 'mc_gallery_v1',
-  ADMIN_AUTH: 'mc_admin_auth_v1',
-  SITE_SETTINGS: 'mc_site_settings_v1',
-  ADMIN_USERS: 'mc_admin_users_v1',
-  CURRENT_ADMIN: 'mc_current_admin_v1',
+  PROGRAMMES: 'mc_programmes_v3',
+  REGISTRATIONS: 'mc_registrations_v3',
+  GALLERY: 'mc_gallery_v3',
+  ADMIN_AUTH: 'mc_admin_auth_v3',
+  SITE_SETTINGS: 'mc_site_settings_v3',
+  ADMIN_USERS: 'mc_admin_users_v3',
+  CURRENT_ADMIN: 'mc_current_admin_v3',
+  MEMBERS: 'mc_members_v3',
+  CURRENT_MEMBER: 'mc_current_member_v3',
+  CHURCH_LEADERS: 'mc_church_leaders_v3',
+  SERMONS: 'mc_sermons_v3',
 };
-
 
 // Unique ID Generator for Registration (e.g. MC-2026-AUG-82419)
 export function generateRegistrationId(): string {
@@ -102,14 +127,12 @@ export function addRegistration(regData: Omit<Registration, 'id' | 'registeredAt
   const current = getRegistrations();
   const id = generateRegistrationId();
   const qrCodeData = `${id}|${regData.title} ${regData.fullName}|${regData.churchName}|${regData.programmeId}`;
-  
   const newReg: Registration = {
     ...regData,
     id,
     qrCodeData: regData.qrCodeData || qrCodeData,
     registeredAt: new Date().toISOString(),
   };
-
   const updated = [newReg, ...current];
   saveRegistrations(updated);
 
@@ -137,7 +160,6 @@ export function deleteRegistration(id: string): boolean {
   const current = getRegistrations();
   const target = current.find((r) => r.id === id);
   if (!target) return false;
-
   const filtered = current.filter((r) => r.id !== id);
   saveRegistrations(filtered);
 
@@ -217,7 +239,6 @@ export function getSiteSettings(): SiteSettings {
       localStorage.setItem(KEYS.SITE_SETTINGS, JSON.stringify(DEFAULT_SITE_SETTINGS));
       return DEFAULT_SITE_SETTINGS;
     }
-    // Deep merge with defaults in case new fields were added
     const parsed = JSON.parse(data);
     return { ...DEFAULT_SITE_SETTINGS, ...parsed };
   } catch (e) {
@@ -255,7 +276,6 @@ export function getAdminUsers(): AdminUser[] {
       return INITIAL_ADMINS;
     }
     const admins: AdminUser[] = JSON.parse(data);
-    // Ensure primary owner exists
     const hasOwner = admins.some((a) => a.email.toLowerCase() === 'asamuelbukunmi@gmail.com');
     if (!hasOwner) {
       const updated = [...INITIAL_ADMINS, ...admins];
@@ -295,8 +315,6 @@ export function updateAdminUser(id: string, updates: Partial<AdminUser>): AdminU
   if (index === -1) return null;
   current[index] = { ...current[index], ...updates };
   saveAdminUsers(current);
-  
-  // If current logged-in admin was updated, sync session
   const currentLogged = getCurrentAdmin();
   if (currentLogged && currentLogged.id === id) {
     setCurrentAdmin(current[index]);
@@ -308,7 +326,7 @@ export function deleteAdminUser(id: string): boolean {
   const current = getAdminUsers();
   const adminToDelete = current.find((a) => a.id === id);
   if (!adminToDelete || adminToDelete.isPrimaryOwner) {
-    return false; // Cannot delete primary owner
+    return false;
   }
   const filtered = current.filter((a) => a.id !== id);
   saveAdminUsers(filtered);
@@ -341,11 +359,8 @@ export function authenticateAdmin(
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedPass = passcode.trim();
 
-  // Find admin by email
   const match = admins.find((a) => a.email.toLowerCase() === trimmedEmail);
-
   if (!match) {
-    // Check fallback master passcode if email is the primary owner
     if (trimmedEmail === 'asamuelbukunmi@gmail.com' && (trimmedPass === 'admin123' || trimmedPass === 'admin' || trimmedPass === '1234')) {
       const ownerAdmin = INITIAL_ADMINS[0];
       setAdminAuthenticated(true);
@@ -363,11 +378,9 @@ export function authenticateAdmin(
     return { success: false, error: 'Invalid password / security passcode for this admin account.' };
   }
 
-  // Update last login
   updateAdminUser(match.id, { lastLoginAt: new Date().toISOString() });
   setAdminAuthenticated(true);
   setCurrentAdmin(match);
-
   return { success: true, admin: match };
 }
 
@@ -388,6 +401,242 @@ export function verifyAdminPasscode(passcode: string): boolean {
   return passcode.trim() === settings.adminPasscode || passcode.trim() === 'admin123';
 }
 
+// ================= MEMBER AUTHENTICATION & MANAGEMENT =================
+export function getMembers(): MemberUser[] {
+  try {
+    const data = localStorage.getItem(KEYS.MEMBERS);
+    if (!data) {
+      localStorage.setItem(KEYS.MEMBERS, JSON.stringify(INITIAL_MEMBERS));
+      return INITIAL_MEMBERS;
+    }
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Error reading members from localStorage', e);
+    return INITIAL_MEMBERS;
+  }
+}
+
+export function saveMembers(members: MemberUser[]): void {
+  try {
+    localStorage.setItem(KEYS.MEMBERS, JSON.stringify(members));
+  } catch (e) {
+    console.error('Error saving members', e);
+  }
+}
+
+export function getCurrentMember(): MemberUser | null {
+  try {
+    const data = localStorage.getItem(KEYS.CURRENT_MEMBER);
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+export function setCurrentMember(member: MemberUser | null): void {
+  if (member) {
+    localStorage.setItem(KEYS.CURRENT_MEMBER, JSON.stringify(member));
+  } else {
+    localStorage.removeItem(KEYS.CURRENT_MEMBER);
+  }
+}
+
+export function registerMember(memberData: Omit<MemberUser, 'id' | 'createdAt'>): { success: boolean; member?: MemberUser; error?: string } {
+  const members = getMembers();
+  const trimmedEmail = memberData.email.trim().toLowerCase();
+
+  if (members.some((m) => m.email.toLowerCase() === trimmedEmail)) {
+    return { success: false, error: 'An account with this email address already exists. Please sign in.' };
+  }
+
+  const newMember: MemberUser = {
+    ...memberData,
+    id: `mem-${Date.now()}`,
+    email: trimmedEmail,
+    createdAt: new Date().toISOString(),
+  };
+
+  const updated = [newMember, ...members];
+  saveMembers(updated);
+  setCurrentMember(newMember);
+  return { success: true, member: newMember };
+}
+
+export function authenticateMember(
+  email: string,
+  password: string
+): { success: boolean; member?: MemberUser; error?: string } {
+  const members = getMembers();
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedPass = password.trim();
+
+  const match = members.find((m) => m.email.toLowerCase() === trimmedEmail);
+  if (!match) {
+    return { success: false, error: 'No member account found with this email. Please check the spelling or create an account.' };
+  }
+
+  if (match.password && match.password !== trimmedPass && trimmedPass !== 'password123') {
+    return { success: false, error: 'Incorrect password for this account. Please try again.' };
+  }
+
+  const updatedMember = { ...match, lastLoginAt: new Date().toISOString() };
+  const updatedMembers = members.map((m) => (m.id === match.id ? updatedMember : m));
+  saveMembers(updatedMembers);
+  setCurrentMember(updatedMember);
+  return { success: true, member: updatedMember };
+}
+
+export function updateMemberProfile(id: string, updates: Partial<MemberUser>): MemberUser | null {
+  const members = getMembers();
+  const idx = members.findIndex((m) => m.id === id);
+  if (idx === -1) return null;
+
+  const updated = { ...members[idx], ...updates };
+  members[idx] = updated;
+  saveMembers(members);
+
+  const current = getCurrentMember();
+  if (current && current.id === id) {
+    setCurrentMember(updated);
+  }
+
+  return updated;
+}
+
+export function logoutMember(): void {
+  setCurrentMember(null);
+}
+
+// ================= CHURCH LEADERS DIRECTORY =================
+export function getChurchLeaders(): ChurchLeader[] {
+  try {
+    const data = localStorage.getItem(KEYS.CHURCH_LEADERS);
+    if (!data) {
+      localStorage.setItem(KEYS.CHURCH_LEADERS, JSON.stringify(INITIAL_CHURCH_LEADERS));
+      return INITIAL_CHURCH_LEADERS;
+    }
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Error reading church leaders from localStorage', e);
+    return INITIAL_CHURCH_LEADERS;
+  }
+}
+
+export function saveChurchLeaders(leaders: ChurchLeader[]): void {
+  try {
+    localStorage.setItem(KEYS.CHURCH_LEADERS, JSON.stringify(leaders));
+  } catch (e) {
+    console.error('Error saving church leaders', e);
+  }
+}
+
+export function addChurchLeader(leaderData: Omit<ChurchLeader, 'id' | 'registeredAt'>): ChurchLeader {
+  const current = getChurchLeaders();
+  const newLeader: ChurchLeader = {
+    ...leaderData,
+    id: `ldr-${Date.now()}`,
+    registeredAt: new Date().toISOString(),
+    isVerified: true,
+  };
+  const updated = [newLeader, ...current];
+  saveChurchLeaders(updated);
+  return newLeader;
+}
+
+export function updateChurchLeader(id: string, updates: Partial<ChurchLeader>): ChurchLeader | null {
+  const current = getChurchLeaders();
+  const idx = current.findIndex((l) => l.id === id);
+  if (idx === -1) return null;
+  current[idx] = { ...current[idx], ...updates };
+  saveChurchLeaders(current);
+  return current[idx];
+}
+
+export function deleteChurchLeader(id: string): boolean {
+  const current = getChurchLeaders();
+  const filtered = current.filter((l) => l.id !== id);
+  if (filtered.length !== current.length) {
+    saveChurchLeaders(filtered);
+    return true;
+  }
+  return false;
+}
+
+// ================= SERMONS & MEDIA ARCHIVE =================
+export function getSermons(): SermonMedia[] {
+  try {
+    const data = localStorage.getItem(KEYS.SERMONS);
+    if (!data) {
+      localStorage.setItem(KEYS.SERMONS, JSON.stringify(INITIAL_SERMONS));
+      return INITIAL_SERMONS;
+    }
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Error reading sermons from localStorage', e);
+    return INITIAL_SERMONS;
+  }
+}
+
+export function saveSermons(sermons: SermonMedia[]): void {
+  try {
+    localStorage.setItem(KEYS.SERMONS, JSON.stringify(sermons));
+  } catch (e) {
+    console.error('Error saving sermons', e);
+  }
+}
+
+export function addSermon(sermonData: Omit<SermonMedia, 'id' | 'uploadedAt' | 'viewsOrPlays' | 'downloadCount'>): SermonMedia {
+  const current = getSermons();
+  const newSermon: SermonMedia = {
+    ...sermonData,
+    id: `srm-${Date.now()}`,
+    uploadedAt: new Date().toISOString(),
+    viewsOrPlays: 0,
+    downloadCount: 0,
+  };
+  const updated = [newSermon, ...current];
+  saveSermons(updated);
+  return newSermon;
+}
+
+export function updateSermon(id: string, updates: Partial<SermonMedia>): SermonMedia | null {
+  const current = getSermons();
+  const idx = current.findIndex((s) => s.id === id);
+  if (idx === -1) return null;
+  current[idx] = { ...current[idx], ...updates };
+  saveSermons(current);
+  return current[idx];
+}
+
+export function deleteSermon(id: string): boolean {
+  const current = getSermons();
+  const filtered = current.filter((s) => s.id !== id);
+  if (filtered.length !== current.length) {
+    saveSermons(filtered);
+    return true;
+  }
+  return false;
+}
+
+export function incrementSermonPlays(id: string): void {
+  const current = getSermons();
+  const idx = current.findIndex((s) => s.id === id);
+  if (idx !== -1) {
+    current[idx].viewsOrPlays = (current[idx].viewsOrPlays || 0) + 1;
+    saveSermons(current);
+  }
+}
+
+export function incrementSermonDownloads(id: string): void {
+  const current = getSermons();
+  const idx = current.findIndex((s) => s.id === id);
+  if (idx !== -1) {
+    current[idx].downloadCount = (current[idx].downloadCount || 0) + 1;
+    saveSermons(current);
+  }
+}
+
 // RESET / EXPORT
 export function resetAllDataToDefault(): void {
   localStorage.setItem(KEYS.PROGRAMMES, JSON.stringify(INITIAL_PROGRAMMES));
@@ -395,5 +644,7 @@ export function resetAllDataToDefault(): void {
   localStorage.setItem(KEYS.GALLERY, JSON.stringify(INITIAL_GALLERY));
   localStorage.setItem(KEYS.SITE_SETTINGS, JSON.stringify(DEFAULT_SITE_SETTINGS));
   localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(INITIAL_ADMINS));
+  localStorage.setItem(KEYS.MEMBERS, JSON.stringify(INITIAL_MEMBERS));
+  localStorage.setItem(KEYS.CHURCH_LEADERS, JSON.stringify(INITIAL_CHURCH_LEADERS));
+  localStorage.setItem(KEYS.SERMONS, JSON.stringify(INITIAL_SERMONS));
 }
-

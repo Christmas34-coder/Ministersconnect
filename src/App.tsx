@@ -1,42 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Programme, 
-  Registration, 
+import {
+  Programme,
+  Registration,
   GalleryItem,
-  SiteSettings 
+  SiteSettings,
+  MemberUser,
+  ChurchLeader,
+  SermonMedia,
 } from './types';
-import { 
-  getProgrammes, 
-  getRegistrations, 
-  getGallery, 
-  addProgramme, 
+import {
+  getProgrammes,
+  getRegistrations,
+  getGallery,
+  addProgramme,
   updateProgramme,
   addGalleryItem,
   getSiteSettings,
-  saveSiteSettings
+  saveSiteSettings,
+  getCurrentMember,
+  logoutMember,
+  getChurchLeaders,
+  addChurchLeader,
+  getSermons,
+  addSermon,
 } from './utils/storage';
-import { Navbar } from './components/Navbar';
+import { Navbar, AppTab } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomeHero } from './components/HomeHero';
 import { UpcomingProgrammesSection } from './components/UpcomingProgrammesSection';
 import { ProgrammeDetailModal } from './components/ProgrammeDetailModal';
 import { RegistrationForm } from './components/RegistrationForm';
 import { ConfirmationLetter } from './components/ConfirmationLetter';
+import { ChurchLeadersSection } from './components/ChurchLeadersSection';
+import { SermonsSection } from './components/SermonsSection';
 import { GallerySection } from './components/GallerySection';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ProgrammeFormModal } from './components/ProgrammeFormModal';
 import { GalleryUploadModal } from './components/GalleryUploadModal';
 import { RegistrationLookupModal } from './components/RegistrationLookupModal';
+import { MemberAuthModal } from './components/MemberAuthModal';
 import { DEFAULT_SITE_SETTINGS } from './data/seedData';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'programmes' | 'register' | 'gallery' | 'admin'>('home');
-  
+  const [activeTab, setActiveTab] = useState<AppTab>('home');
+
   // Data States
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [churchLeaders, setChurchLeaders] = useState<ChurchLeader[]>([]);
+  const [sermons, setSermons] = useState<SermonMedia[]>([]);
+
+  // Member Authentication State
+  const [currentMember, setCurrentMember] = useState<MemberUser | null>(null);
+  const [isMemberAuthModalOpen, setIsMemberAuthModalOpen] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState<string | undefined>(undefined);
 
   // Selected states & Modals
   const [selectedProgrammeId, setSelectedProgrammeId] = useState<string | null>(null);
@@ -51,10 +70,17 @@ export function App() {
 
   // Load data on mount
   const refreshData = () => {
-    setProgrammes(getProgrammes());
-    setRegistrations(getRegistrations());
-    setGallery(getGallery());
-    setSiteSettings(getSiteSettings());
+    try {
+      setProgrammes(getProgrammes());
+      setRegistrations(getRegistrations());
+      setGallery(getGallery());
+      setSiteSettings(getSiteSettings());
+      setChurchLeaders(getChurchLeaders());
+      setSermons(getSermons());
+      setCurrentMember(getCurrentMember());
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
   };
 
   useEffect(() => {
@@ -64,6 +90,22 @@ export function App() {
   const handleUpdateSiteSettings = (updated: SiteSettings) => {
     saveSiteSettings(updated);
     setSiteSettings(updated);
+  };
+
+  // Auth Handlers
+  const handleOpenMemberAuth = (promptMsg?: string) => {
+    setAuthPromptMessage(promptMsg);
+    setIsMemberAuthModalOpen(true);
+  };
+
+  const handleMemberAuthSuccess = (member: MemberUser) => {
+    setCurrentMember(member);
+    setIsMemberAuthModalOpen(false);
+  };
+
+  const handleMemberLogout = () => {
+    logoutMember();
+    setCurrentMember(null);
   };
 
   // Handlers
@@ -78,6 +120,14 @@ export function App() {
     setActiveConfirmationRegistration(newReg);
     refreshData();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddLeaderSuccess = (_newLeader: ChurchLeader) => {
+    refreshData();
+  };
+
+  const handleAddSermonSuccess = (_newSermon: SermonMedia) => {
+    refreshData();
   };
 
   const handleOpenProgrammeModal = (prog?: Programme) => {
@@ -125,11 +175,14 @@ export function App() {
         selectedProgrammeId={selectedProgrammeId}
         registrationsCount={registrations.length}
         siteSettings={siteSettings}
+        currentMember={currentMember}
+        onOpenMemberAuth={() => handleOpenMemberAuth('Please sign in with your email and password.')}
+        onMemberLogout={handleMemberLogout}
       />
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {/* If an active confirmation letter is open (either from just submitting or from lookup/admin) */}
+        {/* If an active confirmation letter is open */}
         {activeConfirmationRegistration ? (
           <ConfirmationLetter
             registration={activeConfirmationRegistration}
@@ -186,12 +239,37 @@ export function App() {
                 selectedProgrammeId={selectedProgrammeId}
                 onRegistrationSuccess={handleRegistrationSuccess}
                 onCancel={() => setActiveTab('home')}
+                currentMember={currentMember}
+                onRequestSignIn={() =>
+                  handleOpenMemberAuth('Please sign in with your email and password to complete your delegate registration.')
+                }
+                onViewExistingRegistration={handleViewRegistrationLetter}
               />
             )}
 
-            {activeTab === 'gallery' && (
-              <GallerySection gallery={gallery} />
+            {activeTab === 'leaders' && (
+              <ChurchLeadersSection
+                leaders={churchLeaders}
+                onAddLeaderSuccess={handleAddLeaderSuccess}
+                currentMember={currentMember}
+                onRequestSignIn={() =>
+                  handleOpenMemberAuth('Please sign in with your member email and password to register as a Church Leader.')
+                }
+              />
             )}
+
+            {activeTab === 'sermons' && (
+              <SermonsSection
+                sermons={sermons}
+                onAddSermonSuccess={handleAddSermonSuccess}
+                currentMember={currentMember}
+                onRequestSignIn={() =>
+                  handleOpenMemberAuth('Please sign in with your member account to upload sermon media and study notes.')
+                }
+              />
+            )}
+
+            {activeTab === 'gallery' && <GallerySection gallery={gallery} />}
 
             {activeTab === 'admin' && (
               <AdminDashboard
@@ -222,21 +300,25 @@ export function App() {
       />
 
       {/* MODALS */}
-      {/* 1. Programme Detail Modal */}
+      <MemberAuthModal
+        isOpen={isMemberAuthModalOpen}
+        onClose={() => setIsMemberAuthModalOpen(false)}
+        onSuccess={handleMemberAuthSuccess}
+        promptMessage={authPromptMessage}
+      />
+
       <ProgrammeDetailModal
         programme={detailProgramme}
         onClose={() => setDetailProgramme(null)}
         onSelectRegister={handleSelectProgrammeForRegister}
       />
 
-      {/* 2. Registration Verification / Lookup Modal */}
       <RegistrationLookupModal
         isOpen={isLookupOpen}
         onClose={() => setIsLookupOpen(false)}
         onSelectRegistration={handleViewRegistrationLetter}
       />
 
-      {/* 3. Admin Programme Create/Edit Modal */}
       <ProgrammeFormModal
         isOpen={isProgrammeFormOpen}
         onClose={() => {
@@ -247,7 +329,6 @@ export function App() {
         programmeToEdit={programmeToEdit}
       />
 
-      {/* 4. Admin Gallery Upload Modal */}
       <GalleryUploadModal
         isOpen={isGalleryUploadOpen}
         onClose={() => setIsGalleryUploadOpen(false)}

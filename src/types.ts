@@ -41,10 +41,10 @@ export type ProgrammeCategory =
 
 export type RegistrationStatus = 'confirmed' | 'checked_in' | 'vip' | 'cancelled';
 
-export type AdminRole = 
-  | 'super_admin' 
-  | 'secretariat_admin' 
-  | 'registration_officer' 
+export type AdminRole =
+  | 'super_admin'
+  | 'secretariat_admin'
+  | 'registration_officer'
   | 'media_manager';
 
 export interface AdminUser {
@@ -59,6 +59,79 @@ export interface AdminUser {
   isActive: boolean;
   isPrimaryOwner?: boolean;
   phone?: string;
+}
+
+export interface MemberUser {
+  id: string;
+  email: string;
+  password?: string;
+  title: MinisterialTitle;
+  fullName: string;
+  phone: string;
+  whatsapp?: string;
+  churchName: string;
+  ministerialPosition: MinisterialPosition;
+  customPosition?: string;
+  city: string;
+  state?: string;
+  country: string;
+  avatarUrl?: string;
+  bio?: string;
+  createdAt: string;
+  lastLoginAt?: string;
+}
+
+export interface ChurchLeader {
+  id: string;
+  title: MinisterialTitle;
+  fullName: string;
+  email: string;
+  phone?: string;
+  whatsapp?: string;
+  churchName: string;
+  denomination?: string;
+  keyPosition: string;
+  positionDescription: string;
+  ministryFocus?: string[];
+  yearsInMinistry?: number;
+  city: string;
+  state?: string;
+  country: string;
+  photoUrl: string;
+  websiteOrSocial?: string;
+  isVerified?: boolean;
+  registeredAt: string;
+  memberId?: string;
+}
+
+export type MediaType = 'audio' | 'video' | 'file';
+
+export interface SermonMedia {
+  id: string;
+  title: string;
+  speaker: string;
+  speakerTitle?: MinisterialTitle;
+  speakerRole?: string;
+  churchName?: string;
+  programmeId?: string;
+  programmeTitle?: string;
+  date: string;
+  mediaType: MediaType;
+  mediaUrl: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSizeBytes?: string;
+  duration?: string;
+  coverImageUrl?: string;
+  category: string;
+  scriptureRef?: string;
+  description: string;
+  tags?: string[];
+  viewsOrPlays?: number;
+  downloadCount?: number;
+  isFeatured?: boolean;
+  uploadedAt: string;
+  uploadedBy?: string;
 }
 
 export interface Speaker {
@@ -106,13 +179,14 @@ export interface Programme {
 }
 
 export interface Registration {
-  id: string; // e.g. MC-2026-AUG-84920
+  id: string;
   title: MinisterialTitle;
   fullName: string;
   email: string;
   phone: string;
   whatsapp: string;
   churchName: string;
+  denomination?: string;
   ministerialPosition: MinisterialPosition;
   customPosition?: string;
   city: string;
@@ -120,15 +194,17 @@ export interface Registration {
   country: string;
   programmeId: string;
   programmeTitle: string;
-  arrivalDate: string;
+  arrivalDate?: string;
   departureDate?: string;
-  attendeesCount: number;
+  attendeesCount?: number;
   attendeeNames?: string[];
   specialRequirements?: string;
   prayerRequests?: string;
   passportPhotoUrl?: string;
   qrCodeData?: string;
   status: RegistrationStatus;
+  checkInStatus?: 'checked_in' | 'not_checked_in';
+  checkInTime?: string;
   registeredAt: string;
   checkedInAt?: string;
   notes?: string;
@@ -169,13 +245,13 @@ export interface SiteSettings {
   heroScriptureQuote: string;
   heroScriptureRef: string;
   heroBannerImageUrl: string;
-  heroOverlayOpacity: number; // e.g. 75 for 75%
-  
+  heroOverlayOpacity: number;
+
   // Announcement Top Bar
   announcementActive: boolean;
   announcementText: string;
   announcementLinkText?: string;
-  announcementLinkTab?: 'programmes' | 'register' | 'gallery';
+  announcementLinkTab?: 'programmes' | 'register' | 'gallery' | 'sermons' | 'leaders';
 
   // Official Confirmation Letter Customization
   letterOrgHeader: string;
@@ -186,18 +262,16 @@ export interface SiteSettings {
   letterImportantInstructions: string[];
   letterSecretariatEmail: string;
   letterSecretariatPhone: string;
-  
+
   // Signatories & Verification Seals
   signatory1Name: string;
   signatory1Title: string;
   signatory1Role: string;
   signatory1SignatureUrl?: string;
-  
   signatory2Name: string;
   signatory2Title: string;
   signatory2Role: string;
   signatory2SignatureUrl?: string;
-
   officialSealText: string;
   officialSealSubtext: string;
 
@@ -206,14 +280,17 @@ export interface SiteSettings {
   accreditationRightsNotice: string;
   privacyNotice: string;
   termsNotice: string;
-  
+
   // Secretariat Headquarters & Contacts
   headquartersAddress: string;
   supportEmail: string;
   supportPhone: string;
   whatsappContact: string;
 
+  // Terminology & Naming Customization
+  programmeTermSingular?: string; // e.g. "Programme", "Summit", "Monthly Program"
+  programmeTermPlural?: string; // e.g. "Programmes", "Summits", "Gatherings"
+
   // Security / Admin Access
   adminPasscode: string;
 }
-

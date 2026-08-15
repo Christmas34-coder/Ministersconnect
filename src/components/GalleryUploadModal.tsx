@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Upload, 
-  Image as ImageIcon, 
-  Tag, 
-  Calendar, 
-  Sparkles,
-  AlertCircle
-} from 'lucide-react';
+import { X, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { GalleryItem, Programme } from '../types';
 
 interface GalleryUploadModalProps {
@@ -24,7 +16,7 @@ const CATEGORIES = [
   'Worship',
   'Fellowship',
   'Youth Ministry',
-  'Special Convocations',
+  'Special Gatherings',
 ];
 
 export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
@@ -39,7 +31,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory] = useState('Impartation');
   const [programmeTitle, setProgrammeTitle] = useState(
-    programmes.length > 0 ? programmes[0].title : 'Global Ministers Convocation'
+    programmes.length > 0 ? programmes[0].title : 'Global Ministers Programme'
   );
   const [tagsInput, setTagsInput] = useState('Apostolic, Prayer, Ministers');
   const [error, setError] = useState('');
@@ -77,7 +69,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
 
     onUpload({
       title: title.trim(),
-      caption: caption.trim() || `${title} during the convocation sessions.`,
+      caption: caption.trim() || `${title} during the programme sessions.`,
       imageUrl: imageUrl.trim(),
       eventDate,
       category,
@@ -85,7 +77,6 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
       tags,
     });
 
-    // Reset and close
     setTitle('');
     setCaption('');
     setImageUrl('');
@@ -94,22 +85,15 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-5 h-5 text-amber-400" />
-            <h3 className="font-bold text-lg font-serif">
-              Upload Programme Picture
-            </h3>
+            <h3 className="font-bold text-lg font-serif">Upload Programme Picture</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition cursor-pointer"
           >
@@ -125,7 +109,6 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
             </div>
           )}
 
-          {/* Image Preview & Upload */}
           <div>
             <label className="block font-semibold text-slate-700 mb-1.5 text-xs">
               Photo Preview & Upload Source <span className="text-red-500">*</span>
@@ -133,12 +116,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
             <div className="flex flex-col sm:flex-row gap-3 items-center">
               <div className="w-full sm:w-36 h-28 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden flex items-center justify-center shrink-0">
                 {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Upload preview"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+                  <img src={imageUrl} alt="Upload preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="text-center p-2 text-slate-400">
                     <ImageIcon className="w-8 h-8 mx-auto mb-1 opacity-50" />
@@ -146,7 +124,6 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                   </div>
                 )}
               </div>
-
               <div className="space-y-2 flex-1 w-full">
                 <input
                   type="text"
@@ -155,17 +132,11 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
                   placeholder="Paste direct Image URL (https://...)"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs"
                 />
-
                 <div>
                   <label className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-semibold cursor-pointer text-slate-700 inline-flex items-center gap-1.5">
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload Local File</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                   </label>
                 </div>
               </div>
@@ -187,24 +158,22 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1 text-xs">
-                Category
-              </label>
+              <label className="block font-semibold text-slate-700 mb-1 text-xs">Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
               >
                 {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1 text-xs">
-                Event Date
-              </label>
+              <label className="block font-semibold text-slate-700 mb-1 text-xs">Event Date</label>
               <input
                 type="date"
                 value={eventDate}
@@ -215,9 +184,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1 text-xs">
-              Associated Programme
-            </label>
+            <label className="block font-semibold text-slate-700 mb-1 text-xs">Associated Programme</label>
             <input
               type="text"
               value={programmeTitle}
@@ -228,9 +195,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1 text-xs">
-              Caption & Description
-            </label>
+            <label className="block font-semibold text-slate-700 mb-1 text-xs">Caption & Description</label>
             <textarea
               rows={2}
               value={caption}
@@ -241,9 +206,7 @@ export const GalleryUploadModal: React.FC<GalleryUploadModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1 text-xs">
-              Tags (Comma separated)
-            </label>
+            <label className="block font-semibold text-slate-700 mb-1 text-xs">Tags (Comma separated)</label>
             <input
               type="text"
               value={tagsInput}

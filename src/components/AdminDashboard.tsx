@@ -1,66 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  Lock, 
-  Users, 
-  Calendar, 
-  Image as ImageIcon, 
-  Search, 
-  Filter, 
-  Download, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
-  LogOut, 
-  RotateCcw, 
-  ExternalLink, 
-  MessageSquare, 
-  Flame, 
-  MapPin, 
-  Church, 
-  Clock,
+import {
+  ShieldCheck,
+  Lock,
+  Users,
+  Calendar,
+  Image as ImageIcon,
+  Search,
+  Download,
+  Plus,
+  Edit,
+  Trash2,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  LogOut,
+  RotateCcw,
+  MessageSquare,
+  Church,
   Sparkles,
-  ChevronDown,
   Eye,
   EyeOff,
-  Check,
   UserCheck,
-  QrCode,
   ScanLine,
-  Camera,
   BadgePercent,
   Copy,
   LayoutGrid,
   Table as TableIcon,
   Shield,
   UserCog,
-  Star
+  Star,
+  RefreshCw,
 } from 'lucide-react';
-import { 
-  Programme, 
-  Registration, 
-  GalleryItem, 
+import {
+  Programme,
+  Registration,
+  GalleryItem,
   RegistrationStatus,
   SiteSettings,
-  AdminUser
+  AdminUser,
 } from '../types';
-import { 
-  isAdminAuthenticated, 
-  setAdminAuthenticated, 
-  deleteProgramme, 
-  deleteRegistration, 
-  updateRegistration, 
-  deleteGalleryItem, 
+import {
+  isAdminAuthenticated,
+  setAdminAuthenticated,
+  deleteProgramme,
+  deleteRegistration,
+  updateRegistration,
+  deleteGalleryItem,
   resetAllDataToDefault,
-  verifyAdminPasscode,
   resetSiteSettingsToDefault,
-  getSiteSettings,
   getCurrentAdmin,
   authenticateAdmin,
-  addProgramme
+  addProgramme,
 } from '../utils/storage';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MinisterBadgeModal } from './MinisterBadgeModal';
@@ -93,16 +83,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDataRefresh,
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(isAdminAuthenticated());
-  const [currentAdmin, setCurrentAdminState] = useState<AdminUser | null>(getCurrentAdmin() || (isAdminAuthenticated() ? INITIAL_ADMINS[0] : null));
-  
-  // Login State
+  const [currentAdmin, setCurrentAdminState] = useState<AdminUser | null>(
+    getCurrentAdmin() || (isAdminAuthenticated() ? INITIAL_ADMINS[0] : null)
+  );
+
+  // Login Form State
   const [adminEmail, setAdminEmail] = useState('asamuelbukunmi@gmail.com');
   const [adminPin, setAdminPin] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<'ministers' | 'programmes' | 'team' | 'gallery' | 'customizer' | 'settings'>('ministers');
+  // Active Admin Tab
+  const [activeTab, setActiveTab] = useState<
+    'ministers' | 'programmes' | 'team' | 'gallery' | 'customizer' | 'settings'
+  >('ministers');
 
   // Programme Manager View Mode
   const [programmeViewMode, setProgrammeViewMode] = useState<'table' | 'grid'>('table');
@@ -116,7 +110,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedPositionFilter, setSelectedPositionFilter] = useState('All');
 
   // Toast Notification
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(
+    null
+  );
 
   // Modals
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -139,7 +135,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    
     const result = authenticateAdmin(adminEmail, adminPin);
     if (result.success && result.admin) {
       setIsAuthenticated(true);
@@ -195,7 +190,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Duplicate Programme
   const handleDuplicateProgramme = (programme: Programme) => {
-    const { id, registeredCount, ...rest } = programme;
+    const { id: _id, registeredCount: _regCount, ...rest } = programme;
     const duplicatedData: Omit<Programme, 'id' | 'registeredCount'> = {
       ...rest,
       title: `${programme.title} (Copy)`,
@@ -253,7 +248,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       `"${r.fullName.replace(/"/g, '""')}"`,
       `"${r.email}"`,
       `"${r.phone}"`,
-      `"${r.whatsapp}"`,
+      `"${r.whatsapp || ''}"`,
       `"${r.churchName.replace(/"/g, '""')}"`,
       `"${r.ministerialPosition}"`,
       `"${r.programmeTitle.replace(/"/g, '""')}"`,
@@ -268,11 +263,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       `"${(r.prayerRequests || '').replace(/"/g, '""')}"`,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Ministers_Connect_Registrations_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      'download',
+      `Ministers_Connect_Registrations_${new Date().toISOString().split('T')[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -288,9 +288,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       r.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.phone.includes(searchQuery);
 
-    const matchesProgramme = selectedProgrammeFilter === 'All' || r.programmeId === selectedProgrammeFilter;
-    const matchesStatus = selectedStatusFilter === 'All' || r.status === selectedStatusFilter;
-    const matchesPosition = selectedPositionFilter === 'All' || r.ministerialPosition === selectedPositionFilter;
+    const matchesProgramme =
+      selectedProgrammeFilter === 'All' || r.programmeId === selectedProgrammeFilter;
+    const matchesStatus =
+      selectedStatusFilter === 'All' || r.status === selectedStatusFilter;
+    const matchesPosition =
+      selectedPositionFilter === 'All' || r.ministerialPosition === selectedPositionFilter;
 
     return matchesSearch && matchesProgramme && matchesStatus && matchesPosition;
   });
@@ -302,17 +305,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       p.theme.toLowerCase().includes(programmeSearch.toLowerCase()) ||
       p.venue.toLowerCase().includes(programmeSearch.toLowerCase()) ||
       p.city.toLowerCase().includes(programmeSearch.toLowerCase());
-    
-    const matchesCategory = programmeCategoryFilter === 'All' || p.category === programmeCategoryFilter;
+
+    const matchesCategory =
+      programmeCategoryFilter === 'All' || p.category === programmeCategoryFilter;
+
     return matchesSearch && matchesCategory;
   });
 
-  const totalAttendeesCount = registrations.reduce((acc, curr) => acc + (curr.attendeesCount || 1), 0);
+  const totalAttendeesCount = registrations.reduce(
+    (acc, curr) => acc + (curr.attendeesCount || 1),
+    0
+  );
 
   // If not authenticated, show secure login gate
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto px-4 py-12 sm:py-16 animate-in fade-in duration-300">
+      <div className="max-w-md mx-auto px-4 py-12 sm:py-16">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl text-center space-y-6">
           <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto shadow-inner border border-amber-200">
             <ShieldCheck className="w-9 h-9" />
@@ -326,7 +334,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Admin & Planning Console
             </h2>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              Restricted portal for authorized Secretariat officers and Super Admin to manage convocations, delegate accreditations, content customizer, and admin accounts.
+              Restricted portal for authorized Secretariat officers and Super Admin to manage
+              programmes, delegate accreditations, content customizer, and admin accounts.
             </p>
           </div>
 
@@ -337,7 +346,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>Primary Master Account</span>
             </div>
             <p className="text-slate-600">
-              Assigned to: <strong className="text-slate-900 font-mono">asamuelbukunmi@gmail.com</strong>
+              Assigned to:{' '}
+              <strong className="text-slate-900 font-mono">asamuelbukunmi@gmail.com</strong>
             </p>
           </div>
 
@@ -379,7 +389,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               {authError && (
                 <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> 
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>{authError}</span>
                 </p>
               )}
@@ -398,10 +408,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               type="button"
               onClick={handleQuickOwnerAccess}
-              className="text-xs text-amber-700 hover:text-amber-800 font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer py-1.5 px-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition border border-amber-200"
+              className="text-xs text-amber-700 hover:text-amber-800 font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer py-2 px-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition border border-amber-200"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>One-Click Super Admin Login (asamuelbukunmi@gmail.com)</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>One-Click Super Admin Access (asamuelbukunmi@gmail.com)</span>
             </button>
           </div>
         </div>
@@ -410,11 +420,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-300 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div 
-          className={`fixed top-20 right-4 sm:right-8 z-50 p-4 rounded-xl shadow-lg border flex items-center gap-3 animate-in slide-in-from-top-4 duration-300 ${
+        <div
+          className={`fixed top-20 right-4 sm:right-8 z-50 p-4 rounded-xl shadow-lg border flex items-center gap-3 ${
             toastMessage.type === 'success'
               ? 'bg-slate-900 text-white border-slate-700'
               : 'bg-red-900 text-white border-red-700'
@@ -431,19 +441,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold uppercase tracking-wider">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Secretariat Admin Console
+                <ShieldCheck className="w-3.5 h-3.5" /> Secretariat Admin Console
               </div>
-
               {currentAdmin && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs border border-slate-700">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span className="font-semibold text-white">{currentAdmin.name}</span>
-                  <span className="text-[10px] text-amber-400 uppercase font-mono">({currentAdmin.role.replace('_', ' ')})</span>
+                  <span className="text-[10px] text-amber-400 uppercase font-mono">
+                    ({currentAdmin.role.replace('_', ' ')})
+                  </span>
                 </div>
               )}
             </div>
-
             <h1 className="text-2xl sm:text-3xl font-bold font-serif text-white">
               Ministers Connect Management Portal
             </h1>
@@ -468,6 +477,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               <Plus className="w-4 h-4 text-amber-400" />
               <span>New Programme</span>
+            </button>
+
+            <button
+              onClick={onDataRefresh}
+              className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition cursor-pointer"
+              title="Refresh Data"
+            >
+              <RefreshCw className="w-4 h-4" />
             </button>
 
             <button
@@ -513,7 +530,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="text-2xl font-bold text-white font-serif mt-1">
               {programmes.length}
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Convocations Listed</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Programmes Listed</div>
           </div>
 
           <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4">
@@ -633,7 +650,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* Filter Pills */}
+            {/* Filter Dropdowns */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
@@ -644,7 +661,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onChange={(e) => setSelectedProgrammeFilter(e.target.value)}
                   className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
                 >
-                  <option value="All">All Convocations ({registrations.length})</option>
+                  <option value="All">All Programmes ({registrations.length})</option>
                   {programmes.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.title}
@@ -683,7 +700,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <option value="Senior Pastor / General Overseer">Senior Pastor / General Overseer</option>
                   <option value="Associate / Resident Pastor">Associate / Resident Pastor</option>
                   <option value="Youth / Campus Pastor">Youth / Campus Pastor</option>
-                  <option value="Worship Director">Music / Worship Director</option>
+                  <option value="Music / Worship Director">Music / Worship Director</option>
                   <option value="Evangelist / Outreach Director">Evangelist / Outreach Director</option>
                 </select>
               </div>
@@ -697,7 +714,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 Showing {filteredRegistrations.length} of {registrations.length} delegate records
               </span>
               <span className="text-[11px] text-amber-700 font-medium">
-                💡 Tip: Click any row or the Edit button to update minister data
+                Tip: Click any row or the Edit button to update minister data
               </span>
             </div>
 
@@ -723,8 +740,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-normal">
                     {filteredRegistrations.map((reg) => (
-                      <tr 
-                        key={reg.id} 
+                      <tr
+                        key={reg.id}
                         className="hover:bg-amber-50/40 transition cursor-pointer"
                         onClick={() => setEditingRegistration(reg)}
                       >
@@ -784,7 +801,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </td>
 
                         {/* Contact */}
-                        <td className="py-3.5 px-4 text-xs whitespace-nowrap space-y-1" onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className="py-3.5 px-4 text-xs whitespace-nowrap space-y-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="text-slate-700">{reg.email}</div>
                           <div className="text-slate-500">{reg.phone}</div>
                           {reg.whatsapp && (
@@ -808,10 +828,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </td>
 
                         {/* Status dropdown */}
-                        <td className="py-3.5 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className="py-3.5 px-4 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <select
                             value={reg.status}
-                            onChange={(e) => handleStatusChange(reg.id, e.target.value as RegistrationStatus)}
+                            onChange={(e) =>
+                              handleStatusChange(reg.id, e.target.value as RegistrationStatus)
+                            }
                             className={`text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer ${
                               reg.status === 'confirmed'
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
@@ -830,7 +855,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className="py-3.5 px-4 text-right whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Edit Button */}
                             <button
@@ -882,7 +910,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* TAB 2: PROGRAMMES MANAGEMENT (WITH TABLE & GRID VIEWS) */}
+      {/* TAB 2: PROGRAMMES MANAGEMENT */}
       {activeTab === 'programmes' && (
         <div className="space-y-6">
           {/* Header & Controls */}
@@ -919,7 +947,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <button
                   onClick={() => setProgrammeViewMode('table')}
                   className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
-                    programmeViewMode === 'table' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                    programmeViewMode === 'table'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
                   }`}
                   title="Table View"
                 >
@@ -929,7 +959,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <button
                   onClick={() => setProgrammeViewMode('grid')}
                   className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
-                    programmeViewMode === 'grid' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                    programmeViewMode === 'grid'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
                   }`}
                   title="Grid Cards View"
                 >
@@ -979,10 +1011,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         100,
                         Math.round((p.registeredCount / p.capacity) * 100)
                       );
-
                       return (
-                        <tr 
-                          key={p.id} 
+                        <tr
+                          key={p.id}
                           className="hover:bg-amber-50/40 transition cursor-pointer"
                           onClick={() => onOpenProgrammeModal(p)}
                         >
@@ -1026,16 +1057,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <div className="font-medium text-slate-900">
                               {p.startDate} to {p.endDate}
                             </div>
-                            <div className="text-xs text-slate-500">
-                              {p.time}
-                            </div>
+                            <div className="text-xs text-slate-500">{p.time}</div>
                           </td>
 
                           {/* Venue */}
                           <td className="py-3.5 px-4">
-                            <div className="font-medium text-slate-800 line-clamp-1">
-                              {p.venue}
-                            </div>
+                            <div className="font-medium text-slate-800 line-clamp-1">{p.venue}</div>
                             <div className="text-xs text-slate-400">
                               {p.city}, {p.country}
                             </div>
@@ -1045,7 +1072,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-bold text-slate-900">{p.registeredCount}</span>
-                              <span className="text-slate-400">/ {p.capacity} ({capacityPercent}%)</span>
+                              <span className="text-slate-400">
+                                / {p.capacity} ({capacityPercent}%)
+                              </span>
                             </div>
                             <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <div
@@ -1057,21 +1086,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                           {/* Status */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                              p.status === 'upcoming' 
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                : p.status === 'ongoing'
-                                ? 'bg-blue-50 text-blue-800 border-blue-300'
-                                : p.status === 'completed'
-                                ? 'bg-slate-100 text-slate-800 border-slate-300'
-                                : 'bg-red-50 text-red-800 border-red-300'
-                            }`}>
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                                p.status === 'upcoming'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                  : p.status === 'ongoing'
+                                  ? 'bg-blue-50 text-blue-800 border-blue-300'
+                                  : p.status === 'completed'
+                                  ? 'bg-slate-100 text-slate-800 border-slate-300'
+                                  : 'bg-red-50 text-red-800 border-red-300'
+                              }`}
+                            >
                               {p.status.toUpperCase()}
                             </span>
                           </td>
 
                           {/* Actions */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <td
+                            className="py-3.5 px-4 text-right whitespace-nowrap"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => onOpenProgrammeModal(p)}
@@ -1081,7 +1115,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <Edit className="w-3.5 h-3.5" />
                                 <span>Edit</span>
                               </button>
-
                               <button
                                 onClick={() => handleDuplicateProgramme(p)}
                                 className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition cursor-pointer"
@@ -1089,7 +1122,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
-
                               <button
                                 onClick={() => handleDeleteProgramme(p.id, p.title)}
                                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
@@ -1116,7 +1148,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   100,
                   Math.round((programme.registeredCount / programme.capacity) * 100)
                 );
-
                 return (
                   <div
                     key={programme.id}
@@ -1153,11 +1184,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="mt-3 space-y-1 text-xs text-slate-500">
                           <div className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                            <span>{programme.startDate} to {programme.endDate}</span>
+                            <span>
+                              {programme.startDate} to {programme.endDate}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-amber-600" />
-                            <span>{programme.venue}, {programme.city}</span>
+                            <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                            <span>
+                              {programme.venue}, {programme.city}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1185,7 +1220,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <Edit className="w-3.5 h-3.5" />
                           <span>Edit Programme</span>
                         </button>
-
                         <button
                           onClick={() => handleDuplicateProgramme(programme)}
                           className="p-2 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold transition"
@@ -1193,7 +1227,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         >
                           <Copy className="w-4 h-4" />
                         </button>
-
                         <button
                           onClick={() => handleDeleteProgramme(programme.id, programme.title)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-xl text-xs font-semibold transition flex items-center justify-center cursor-pointer"
@@ -1224,7 +1257,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold font-serif text-slate-900">
-              Convocation Gallery Archive ({gallery.length} Photos)
+              Programme Gallery Archive ({gallery.length} Photos)
             </h3>
             <button
               onClick={onOpenGalleryModal}
@@ -1257,12 +1290,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900 font-serif">
-                      {item.title}
-                    </h4>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">
-                      {item.caption}
-                    </p>
+                    <h4 className="font-bold text-sm text-slate-900 font-serif">{item.title}</h4>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.caption}</p>
                   </div>
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
@@ -1289,7 +1318,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onSave={(updated) => {
             if (onUpdateSiteSettings) {
               onUpdateSiteSettings(updated);
-              showToast('Site branding, banners, confirmation letter & write-ups saved successfully!');
+              showToast(
+                'Site branding, banners, confirmation letter & write-ups saved successfully!'
+              );
             }
           }}
           onResetToDefault={() => {
@@ -1316,16 +1347,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-800">Export All Data as JSON</h4>
-                <p className="text-xs text-slate-500">Download complete dataset of programmes, registrations, admins, and gallery items.</p>
+                <p className="text-xs text-slate-500">
+                  Download complete dataset of programmes, registrations, admins, and gallery items.
+                </p>
               </div>
               <button
                 onClick={() => {
-                  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(
-                    JSON.stringify({ programmes, registrations, gallery, siteSettings }, null, 2)
-                  );
+                  const dataStr =
+                    'data:text/json;charset=utf-8,' +
+                    encodeURIComponent(
+                      JSON.stringify(
+                        { programmes, registrations, gallery, siteSettings },
+                        null,
+                        2
+                      )
+                    );
                   const downloadAnchor = document.createElement('a');
                   downloadAnchor.setAttribute('href', dataStr);
-                  downloadAnchor.setAttribute('download', `MinistersConnect_Backup_${Date.now()}.json`);
+                  downloadAnchor.setAttribute(
+                    'download',
+                    `MinistersConnect_Backup_${Date.now()}.json`
+                  );
                   document.body.appendChild(downloadAnchor);
                   downloadAnchor.click();
                   downloadAnchor.remove();
@@ -1340,11 +1382,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="p-4 bg-red-50/50 border border-red-200 rounded-xl flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-bold text-red-900">Reset to Default Seeds</h4>
-                <p className="text-xs text-red-700">Restore default demo programmes, sample registered ministers, and admin accounts.</p>
+                <p className="text-xs text-red-700">
+                  Restore default demo programmes, sample registered ministers, and admin accounts.
+                </p>
               </div>
               <button
                 onClick={() => {
-                  if (window.confirm('Reset all app data to default demonstration seeds? Any custom programmes or registrations will be replaced.')) {
+                  if (
+                    window.confirm(
+                      'Reset all app data to default demonstration seeds? Any custom programmes or registrations will be replaced.'
+                    )
+                  ) {
                     resetAllDataToDefault();
                     onDataRefresh();
                     showToast('Reset system to default seeds.');

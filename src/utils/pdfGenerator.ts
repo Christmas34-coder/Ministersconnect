@@ -9,7 +9,6 @@ export async function exportElementToPDF(elementId: string, filename: string = '
   }
 
   try {
-    // Render the element to a canvas with high scale for crisp vector-like text
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
@@ -27,12 +26,10 @@ export async function exportElementToPDF(elementId: string, filename: string = '
 
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-
     const imgWidth = pdfWidth - 20; // 10mm margins
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     if (imgHeight > pdfHeight - 20) {
-      // Scale down to fit one single official certificate page nicely
       const scaledWidth = ((pdfHeight - 20) * canvas.width) / canvas.height;
       const xOffset = (pdfWidth - scaledWidth) / 2;
       pdf.addImage(imgData, 'PNG', xOffset, 10, scaledWidth, pdfHeight - 20);
@@ -44,7 +41,6 @@ export async function exportElementToPDF(elementId: string, filename: string = '
     return true;
   } catch (error) {
     console.error('Error generating PDF:', error);
-    // Fallback: prompt native print
     window.print();
     return false;
   }

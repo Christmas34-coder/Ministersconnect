@@ -2,20 +2,7 @@ import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import {
-  X,
-  Printer,
-  Download,
-  ShieldCheck,
-  Building,
-  MapPin,
-  Calendar,
-  Sparkles,
-  Award,
-  CheckCircle2,
-  Copy,
-  Check
-} from 'lucide-react';
+import { X, Printer, Download, Building, MapPin, Award, CheckCircle2, Copy, Check, Image as ImageIcon, FileText } from 'lucide-react';
 import { Registration, Programme } from '../types';
 
 interface MinisterBadgeModalProps {
@@ -29,15 +16,18 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
   isOpen,
   onClose,
   registration,
-  programme,
 }) => {
   const badgeRef = useRef<HTMLDivElement | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [downloadSuccessMessage, setDownloadSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen || !registration) return null;
 
-  const qrPayload = registration.qrCodeData || `${registration.id}|${registration.title} ${registration.fullName}|${registration.churchName}|${registration.programmeId}`;
+  const qrPayload =
+    registration.qrCodeData ||
+    `${registration.id}|${registration.title} ${registration.fullName}|${registration.churchName}|${registration.programmeId}`;
 
   const copyRegId = () => {
     navigator.clipboard.writeText(registration.id);
@@ -49,10 +39,9 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
     window.print();
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadImage = async () => {
     if (!badgeRef.current) return;
-    setIsGeneratingPdf(true);
-
+    setIsGeneratingImage(true);
     try {
       const canvas = await html2canvas(badgeRef.current, {
         scale: 3,
@@ -60,16 +49,46 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
         allowTaint: true,
         backgroundColor: '#ffffff',
       });
+      const imgData = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      const safeName = registration.fullName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      downloadLink.download = `Minister_Badge_${registration.id}_${safeName}.png`;
+      downloadLink.href = imgData;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
 
+      setDownloadSuccessMessage('Badge downloaded as PNG image!');
+      setTimeout(() => setDownloadSuccessMessage(null), 3500);
+    } catch (err) {
+      console.error('Badge image download error:', err);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!badgeRef.current) return;
+    setIsGeneratingPdf(true);
+    try {
+      const canvas = await html2canvas(badgeRef.current, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+      });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [100, 150], // Standard lanyard badge dimensions
+        format: [100, 150],
       });
-
       pdf.addImage(imgData, 'PNG', 0, 0, 100, 150);
-      pdf.save(`Minister_Badge_${registration.id}.pdf`);
+      const safeName = registration.fullName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      pdf.save(`Minister_Badge_${registration.id}_${safeName}.pdf`);
+
+      setDownloadSuccessMessage('Badge downloaded as PDF document!');
+      setTimeout(() => setDownloadSuccessMessage(null), 3500);
     } catch (err) {
       console.error('Badge PDF generation error:', err);
     } finally {
@@ -78,7 +97,7 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 flex items-center justify-center p-4 sm:p-6">
       <div
         id="minister-badge-modal-card"
         className="relative w-full max-w-lg bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col max-h-[95vh]"
@@ -87,21 +106,28 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
         <div className="bg-slate-950 px-6 py-4 flex items-center justify-between border-b border-slate-800 text-white">
           <div className="flex items-center gap-2.5">
             <Award className="w-5 h-5 text-amber-400" />
-            <h3 className="text-sm font-bold tracking-wide">
-              Official Ministerial Accreditation Badge
-            </h3>
+            <h3 className="text-sm font-bold tracking-wide">Official Ministerial Accreditation Badge</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Status Toast */}
+        {downloadSuccessMessage && (
+          <div className="bg-emerald-500/10 border-b border-emerald-500/30 px-4 py-2 text-center text-xs font-semibold text-emerald-400 flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>{downloadSuccessMessage}</span>
+          </div>
+        )}
+
         {/* Scrollable Badge View */}
         <div className="p-6 overflow-y-auto flex flex-col items-center justify-center space-y-6">
-          {/* Printable Badge Container (Sized 100mm x 150mm ratio) */}
+          {/* Printable Badge Container */}
           <div
             ref={badgeRef}
             id="printable-delegate-badge"
@@ -132,7 +158,6 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
 
             {/* Photo & Delegate Identification */}
             <div className="p-4 flex flex-col items-center text-center space-y-3 bg-gradient-to-b from-white to-slate-50">
-              {/* Passport Photo Frame */}
               <div className="relative">
                 <div className="w-28 h-28 rounded-2xl overflow-hidden border-3 border-amber-500 shadow-md bg-slate-900">
                   {registration.passportPhotoUrl ? (
@@ -154,7 +179,6 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
                 </div>
               </div>
 
-              {/* Minister Title & Name */}
               <div className="space-y-0.5">
                 <span className="inline-block text-[11px] font-extrabold text-amber-700 uppercase tracking-wider">
                   {registration.title}
@@ -171,18 +195,16 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
                 </p>
               </div>
 
-              {/* Programme Section */}
               <div className="w-full bg-slate-100 rounded-xl p-2.5 border border-slate-200 text-left space-y-1">
                 <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Enrolled Convocation
+                  Enrolled Programme
                 </span>
                 <p className="text-[11px] font-black text-slate-900 line-clamp-1">
                   {registration.programmeTitle}
                 </p>
                 <div className="flex items-center justify-between text-[10px] text-slate-600 pt-0.5">
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-400" />
-                    {registration.city}, {registration.country}
+                    <MapPin className="w-3 h-3 text-slate-400" /> {registration.city}, {registration.country}
                   </span>
                   <span className="font-bold text-amber-800">
                     {registration.attendeesCount} Delegate(s)
@@ -190,28 +212,16 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
                 </div>
               </div>
 
-              {/* QR Code & Barcode Section */}
+              {/* QR Code & Barcode */}
               <div className="w-full pt-1 flex flex-col items-center space-y-2">
                 <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
-                  <QRCodeSVG
-                    value={qrPayload}
-                    size={96}
-                    level="H"
-                    includeMargin={false}
-                    fgColor="#0f172a"
-                  />
+                  <QRCodeSVG value={qrPayload} size={96} level="H" includeMargin={false} fgColor="#0f172a" />
                 </div>
-
-                {/* Simulated 1D Barcode */}
                 <div className="w-full px-2 space-y-0.5 text-center">
                   <div className="h-6 bg-slate-900 rounded-xs flex items-center justify-center px-2 py-0.5">
                     <div className="w-full h-full flex justify-between items-center opacity-85">
-                      {[1,3,2,4,1,2,4,3,1,4,2,3,1,2,4,1,3,2,4,1,2,3,4,1,2,3,4,1,3,2].map((w, idx) => (
-                        <div
-                          key={idx}
-                          style={{ width: `${w}px` }}
-                          className="h-full bg-white"
-                        />
+                      {[1, 3, 2, 4, 1, 2, 4, 3, 1, 4, 2, 3, 1, 2, 4, 1, 3, 2, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 3, 2].map((w, idx) => (
+                        <div key={idx} style={{ width: `${w}px` }} className="h-full bg-white" />
                       ))}
                     </div>
                   </div>
@@ -222,44 +232,56 @@ export const MinisterBadgeModal: React.FC<MinisterBadgeModalProps> = ({
               </div>
             </div>
 
-            {/* Badge Footer */}
             <div className="bg-slate-900 text-slate-300 text-[8px] uppercase tracking-wider py-1.5 px-3 text-center border-t border-slate-800 flex items-center justify-between">
               <span>Official Accreditation Pass</span>
               <span className="text-amber-400 font-bold">2026/2027</span>
             </div>
           </div>
 
-          {/* Quick Actions Under Badge */}
-          <div className="w-full flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              id="btn-print-badge"
-              onClick={handlePrintBadge}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-900 font-bold text-xs rounded-xl shadow-md hover:bg-slate-100 transition-colors"
-            >
-              <Printer className="w-4 h-4 text-amber-600" />
-              Print Accreditation Badge
-            </button>
+          {/* Action Buttons Under Badge */}
+          <div className="w-full flex flex-col gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                id="btn-download-badge-image"
+                disabled={isGeneratingImage}
+                onClick={handleDownloadImage}
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ImageIcon className="w-4 h-4" />
+                <span>{isGeneratingImage ? 'Exporting Image...' : 'Download Badge (Image)'}</span>
+              </button>
+              <button
+                type="button"
+                id="btn-download-badge-pdf"
+                disabled={isGeneratingPdf}
+                onClick={handleDownloadPdf}
+                className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>{isGeneratingPdf ? 'Generating PDF...' : 'Download Badge (PDF)'}</span>
+              </button>
+            </div>
 
-            <button
-              type="button"
-              id="btn-download-badge-pdf"
-              disabled={isGeneratingPdf}
-              onClick={handleDownloadPdf}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              {isGeneratingPdf ? 'Generating PDF...' : 'Download Badge PDF'}
-            </button>
-
-            <button
-              type="button"
-              onClick={copyRegId}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-semibold rounded-xl transition-colors"
-            >
-              {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copiedId ? 'Copied ID' : 'Copy ID'}
-            </button>
+            <div className="flex items-center gap-2 justify-center pt-1">
+              <button
+                type="button"
+                id="btn-print-badge"
+                onClick={handlePrintBadge}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-slate-800 hover:bg-slate-100 font-semibold text-xs rounded-xl transition-colors cursor-pointer border border-slate-300"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-600" />
+                <span>Print Pass</span>
+              </button>
+              <button
+                type="button"
+                onClick={copyRegId}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedId ? 'Copied ID' : 'Copy ID'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
