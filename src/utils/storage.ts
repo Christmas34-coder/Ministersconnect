@@ -221,6 +221,25 @@ export function addGalleryItem(item: Omit<GalleryItem, 'id'>): GalleryItem {
   return newItem;
 }
 
+export function updateGalleryItem(
+  id: string,
+  updates: Partial<Omit<GalleryItem, 'id'>>
+): GalleryItem | null {
+  const current = getGallery();
+  let updatedItem: GalleryItem | null = null;
+  const updated = current.map((g) => {
+    if (g.id === id) {
+      updatedItem = { ...g, ...updates };
+      return updatedItem;
+    }
+    return g;
+  });
+  if (updatedItem) {
+    saveGallery(updated);
+  }
+  return updatedItem;
+}
+
 export function deleteGalleryItem(id: string): boolean {
   const current = getGallery();
   const filtered = current.filter((g) => g.id !== id);
@@ -506,6 +525,20 @@ export function updateMemberProfile(id: string, updates: Partial<MemberUser>): M
 
 export function logoutMember(): void {
   setCurrentMember(null);
+}
+
+export function deleteMemberUser(id: string): boolean {
+  const members = getMembers();
+  const filtered = members.filter((m) => m.id !== id);
+  if (filtered.length !== members.length) {
+    saveMembers(filtered);
+    const current = getCurrentMember();
+    if (current && current.id === id) {
+      setCurrentMember(null);
+    }
+    return true;
+  }
+  return false;
 }
 
 // ================= CHURCH LEADERS DIRECTORY =================

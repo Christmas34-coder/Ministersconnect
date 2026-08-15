@@ -15,6 +15,7 @@ import {
   addProgramme,
   updateProgramme,
   addGalleryItem,
+  updateGalleryItem,
   getSiteSettings,
   saveSiteSettings,
   getCurrentMember,
@@ -39,6 +40,7 @@ import { ProgrammeFormModal } from './components/ProgrammeFormModal';
 import { GalleryUploadModal } from './components/GalleryUploadModal';
 import { RegistrationLookupModal } from './components/RegistrationLookupModal';
 import { MemberAuthModal } from './components/MemberAuthModal';
+import { MinisterBadgeModal } from './components/MinisterBadgeModal';
 import { DEFAULT_SITE_SETTINGS } from './data/seedData';
 
 export function App() {
@@ -61,12 +63,15 @@ export function App() {
   const [selectedProgrammeId, setSelectedProgrammeId] = useState<string | null>(null);
   const [detailProgramme, setDetailProgramme] = useState<Programme | null>(null);
   const [activeConfirmationRegistration, setActiveConfirmationRegistration] = useState<Registration | null>(null);
+  const [activeBadgeRegistration, setActiveBadgeRegistration] = useState<Registration | null>(null);
   const [isLookupOpen, setIsLookupOpen] = useState(false);
+  const [lookupInitialQuery, setLookupInitialQuery] = useState('');
 
   // Admin Modals
   const [isProgrammeFormOpen, setIsProgrammeFormOpen] = useState(false);
   const [programmeToEdit, setProgrammeToEdit] = useState<Programme | null>(null);
   const [isGalleryUploadOpen, setIsGalleryUploadOpen] = useState(false);
+  const [galleryItemToEdit, setGalleryItemToEdit] = useState<GalleryItem | null>(null);
 
   // Load data on mount
   const refreshData = () => {
@@ -146,10 +151,23 @@ export function App() {
     setProgrammeToEdit(null);
   };
 
+  const handleOpenGalleryModal = (item?: GalleryItem) => {
+    setGalleryItemToEdit(item || null);
+    setIsGalleryUploadOpen(true);
+  };
+
   const handleUploadGallery = (item: Omit<GalleryItem, 'id'>) => {
     addGalleryItem(item);
     refreshData();
     setIsGalleryUploadOpen(false);
+    setGalleryItemToEdit(null);
+  };
+
+  const handleUpdateGallery = (id: string, updates: Partial<Omit<GalleryItem, 'id'>>) => {
+    updateGalleryItem(id, updates);
+    refreshData();
+    setIsGalleryUploadOpen(false);
+    setGalleryItemToEdit(null);
   };
 
   const handleViewRegistrationLetter = (reg: Registration) => {
@@ -171,7 +189,14 @@ export function App() {
           }
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onOpenLookup={() => setIsLookupOpen(true)}
+        onOpenLookup={() => {
+          setLookupInitialQuery('');
+          setIsLookupOpen(true);
+        }}
+        onOpenBadgeLookup={(defaultQuery) => {
+          setLookupInitialQuery(defaultQuery || '');
+          setIsLookupOpen(true);
+        }}
         selectedProgrammeId={selectedProgrammeId}
         registrationsCount={registrations.length}
         siteSettings={siteSettings}
@@ -269,17 +294,24 @@ export function App() {
               />
             )}
 
-            {activeTab === 'gallery' && <GallerySection gallery={gallery} />}
+            {activeTab === 'gallery' && (
+              <GallerySection
+                gallery={gallery}
+                isAdmin={true}
+                onEditItem={handleOpenGalleryModal}
+              />
+            )}
 
             {activeTab === 'admin' && (
               <AdminDashboard
                 programmes={programmes}
                 registrations={registrations}
                 gallery={gallery}
+                churchLeaders={churchLeaders}
                 siteSettings={siteSettings}
                 onUpdateSiteSettings={handleUpdateSiteSettings}
                 onOpenProgrammeModal={handleOpenProgrammeModal}
-                onOpenGalleryModal={() => setIsGalleryUploadOpen(true)}
+                onOpenGalleryModal={handleOpenGalleryModal}
                 onViewConfirmationLetter={handleViewRegistrationLetter}
                 onDataRefresh={refreshData}
               />
@@ -296,7 +328,10 @@ export function App() {
           setActiveConfirmationRegistration(null);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onOpenLookup={() => setIsLookupOpen(true)}
+        onOpenLookup={() => {
+          setLookupInitialQuery('');
+          setIsLookupOpen(true);
+        }}
       />
 
       {/* MODALS */}
@@ -315,9 +350,26 @@ export function App() {
 
       <RegistrationLookupModal
         isOpen={isLookupOpen}
-        onClose={() => setIsLookupOpen(false)}
+        onClose={() => {
+          setIsLookupOpen(false);
+          setLookupInitialQuery('');
+        }}
+        initialQuery={lookupInitialQuery}
         onSelectRegistration={handleViewRegistrationLetter}
+        onSelectBadge={(reg) => {
+          setActiveBadgeRegistration(reg);
+        }}
       />
+
+      {/* Minister Accreditation Badge Modal */}
+      {activeBadgeRegistration && (
+        <MinisterBadgeModal
+          isOpen={Boolean(activeBadgeRegistration)}
+          onClose={() => setActiveBadgeRegistration(null)}
+          registration={activeBadgeRegistration}
+          programme={programmes.find((p) => p.id === activeBadgeRegistration.programmeId)}
+        />
+      )}
 
       <ProgrammeFormModal
         isOpen={isProgrammeFormOpen}
@@ -331,8 +383,13 @@ export function App() {
 
       <GalleryUploadModal
         isOpen={isGalleryUploadOpen}
-        onClose={() => setIsGalleryUploadOpen(false)}
+        onClose={() => {
+          setIsGalleryUploadOpen(false);
+          setGalleryItemToEdit(null);
+        }}
         onUpload={handleUploadGallery}
+        onUpdate={handleUpdateGallery}
+        itemToEdit={galleryItemToEdit}
         programmes={programmes}
       />
     </div>

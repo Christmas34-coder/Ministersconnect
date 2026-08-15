@@ -599,12 +599,13 @@ export const SiteSettingsEditor: React.FC<SiteSettingsEditorProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Secretariat Headquarters Physical Address
+                  Ministers Connect Headquarters Physical Address
                 </label>
                 <input
                   type="text"
                   value={formData.headquartersAddress}
                   onChange={(e) => handleChange('headquartersAddress', e.target.value)}
+                  placeholder="e.g. Ministers Connect Headquarters, Maitama District, Abuja (FCT), Nigeria"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 />
               </div>

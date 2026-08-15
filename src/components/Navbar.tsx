@@ -15,6 +15,8 @@ import {
   BookOpen,
   LogIn,
   LogOut,
+  BadgePercent,
+  Download,
 } from 'lucide-react';
 import { SiteSettings, MemberUser } from '../types';
 import { DEFAULT_SITE_SETTINGS } from '../data/seedData';
@@ -32,6 +34,7 @@ interface NavbarProps {
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   onOpenLookup: () => void;
+  onOpenBadgeLookup?: (defaultQuery?: string) => void;
   selectedProgrammeId?: string | null;
   registrationsCount: number;
   siteSettings?: SiteSettings;
@@ -44,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenLookup,
+  onOpenBadgeLookup,
   registrationsCount,
   siteSettings = DEFAULT_SITE_SETTINGS,
   currentMember,
@@ -112,11 +116,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenBadgeLookup) {
+                onOpenBadgeLookup();
+              } else {
+                onOpenLookup();
+              }
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold transition cursor-pointer text-[11px] border border-amber-500/40"
+            title="Download your Minister Accreditation Badge"
+          >
+            <BadgePercent className="w-3 h-3 text-amber-400" />
+            <span>Download Badge</span>
+          </button>
+
           <button
             type="button"
             onClick={onOpenLookup}
-            className="flex items-center gap-1.5 text-slate-300 hover:text-amber-400 font-medium transition cursor-pointer text-[11px]"
+            className="hidden sm:flex items-center gap-1 text-slate-300 hover:text-amber-400 font-medium transition cursor-pointer text-[11px]"
           >
             <Search className="w-3 h-3" />
             <span>Find Registration</span>
@@ -137,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               {userDropdownOpen && (
-                <div className="absolute right-0 mt-1.5 w-52 bg-slate-900 rounded-xl shadow-xl border border-slate-800 p-1.5 z-50 text-slate-200">
+                <div className="absolute right-0 mt-1.5 w-56 bg-slate-900 rounded-xl shadow-xl border border-slate-800 p-1.5 z-50 text-slate-200">
                   <div className="px-2.5 py-1.5 border-b border-slate-800 mb-1">
                     <p className="font-bold text-xs text-white truncate">
                       {currentMember.title} {currentMember.fullName}
@@ -147,6 +167,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {currentMember.churchName}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      if (onOpenBadgeLookup) {
+                        onOpenBadgeLookup(currentMember.email);
+                      } else {
+                        onOpenLookup();
+                      }
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 text-xs text-amber-300 hover:bg-slate-800 rounded-lg flex items-center gap-2 cursor-pointer transition font-bold"
+                  >
+                    <BadgePercent className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Download Accreditation Badge</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -362,7 +397,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             );
           })}
 
-          <div className="pt-1.5 border-t border-slate-800 mt-1">
+          <div className="pt-1.5 border-t border-slate-800 mt-1 space-y-1">
+            <button
+              onClick={() => {
+                if (onOpenBadgeLookup) {
+                  onOpenBadgeLookup();
+                } else {
+                  onOpenLookup();
+                }
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-amber-300 hover:text-amber-200 text-xs hover:bg-slate-800 rounded-lg transition font-semibold"
+            >
+              <BadgePercent className="w-3.5 h-3.5 text-amber-400" />
+              <span>Download Minister Accreditation Badge</span>
+            </button>
             <button
               onClick={() => {
                 onOpenLookup();
@@ -370,7 +419,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               className="w-full flex items-center gap-2 px-2.5 py-1 text-slate-400 hover:text-amber-300 text-xs hover:bg-slate-800 rounded-lg transition"
             >
-              <Search className="w-3 h-3 text-slate-400" />
+              <Search className="w-3.5 h-3.5 text-slate-400" />
               <span>Verify & Download Registration Letter</span>
             </button>
           </div>

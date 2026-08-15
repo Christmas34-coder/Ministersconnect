@@ -281,7 +281,7 @@ export interface SiteSettings {
   privacyNotice: string;
   termsNotice: string;
 
-  // Secretariat Headquarters & Contacts
+  // Ministers Connect Headquarters & Contacts
   headquartersAddress: string;
   supportEmail: string;
   supportPhone: string;

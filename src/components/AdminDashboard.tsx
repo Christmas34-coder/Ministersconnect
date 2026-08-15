@@ -38,6 +38,7 @@ import {
   RegistrationStatus,
   SiteSettings,
   AdminUser,
+  ChurchLeader,
 } from '../types';
 import {
   isAdminAuthenticated,
@@ -46,6 +47,8 @@ import {
   deleteRegistration,
   updateRegistration,
   deleteGalleryItem,
+  deleteChurchLeader,
+  updateChurchLeader,
   resetAllDataToDefault,
   resetSiteSettingsToDefault,
   getCurrentAdmin,
@@ -63,10 +66,11 @@ interface AdminDashboardProps {
   programmes: Programme[];
   registrations: Registration[];
   gallery: GalleryItem[];
+  churchLeaders?: ChurchLeader[];
   siteSettings?: SiteSettings;
   onUpdateSiteSettings?: (updated: SiteSettings) => void;
   onOpenProgrammeModal: (programmeToEdit?: Programme) => void;
-  onOpenGalleryModal: () => void;
+  onOpenGalleryModal: (itemToEdit?: GalleryItem) => void;
   onViewConfirmationLetter: (registration: Registration) => void;
   onDataRefresh: () => void;
 }
@@ -75,6 +79,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   programmes,
   registrations,
   gallery,
+  churchLeaders = [],
   siteSettings = DEFAULT_SITE_SETTINGS,
   onUpdateSiteSettings,
   onOpenProgrammeModal,
@@ -95,8 +100,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Active Admin Tab
   const [activeTab, setActiveTab] = useState<
-    'ministers' | 'programmes' | 'team' | 'gallery' | 'customizer' | 'settings'
+    'ministers' | 'leaders' | 'programmes' | 'team' | 'gallery' | 'customizer' | 'settings'
   >('ministers');
+
+  // Selected registered ministers for bulk operations
+  const [selectedRegIds, setSelectedRegIds] = useState<string[]>([]);
+
+  // Presbytery Leaders Search
+  const [leaderSearch, setLeaderSearch] = useState('');
+
+  // Admin Delete Confirmation Modal State
+  const [deleteModalState, setDeleteModalState] = useState<{
+    isOpen: boolean;
+    type: 'registration' | 'leader' | 'bulk_registrations';
+    id?: string;
+    ids?: string[];
+    name: string;
+    details?: string;
+    churchName?: string;
+    photoUrl?: string;
+  } | null>(null);
 
   // Programme Manager View Mode
   const [programmeViewMode, setProgrammeViewMode] = useState<'table' | 'grid'>('table');
@@ -108,6 +131,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedProgrammeFilter, setSelectedProgrammeFilter] = useState('All');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
   const [selectedPositionFilter, setSelectedPositionFilter] = useState('All');
+
+  // Filters for Gallery Archives
+  const [gallerySearch, setGallerySearch] = useState('');
+  const [galleryCategoryFilter, setGalleryCategoryFilter] = useState('All');
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(
@@ -201,9 +228,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onDataRefresh();
   };
 
-  // Delete Registration
+  // Trigger Admin Delete Confirmation Modal for Single Minister
+  const handleOpenDeleteMinister = (reg: Registration) => {
+    setDeleteModalState({
+      isOpen: true,
+      type: 'registration',
+      id: reg.id,
+      name: `${reg.title} ${reg.fullName}`,
+      churchName: reg.churchName,
+      details: `ID: ${reg.id} • Programme: ${reg.programmeTitle} • Registered: ${new Date(reg.registeredAt).toLocaleDateString()}`,
+      photoUrl: reg.passportPhotoUrl,
+    });
+  };
+
+  // Trigger Admin Delete Confirmation Modal for Bulk Selection
+  const handleOpenBulkDelete = () => {
+    if (selectedRegIds.length === 0) return;
+    setDeleteModalState({
+      isOpen: true,
+      type: 'bulk_registrations',
+      ids: [...selectedRegIds],
+      name: `${selectedRegIds.length} Selected Ministers / Delegates`,
+      details: `Registration IDs: ${selectedRegIds.slice(0, 5).join(', ')}${selectedRegIds.length > 5 ? ` +${selectedRegIds.length - 5} more` : ''}`,
+    });
+  };
+
+  // Trigger Admin Delete Confirmation Modal for Church Leader
+  const handleOpenDeleteLeader = (leader: ChurchLeader) => {
+    setDeleteModalState({
+      isOpen: true,
+      type: 'leader',
+      id: leader.id,
+      name: `${leader.title} ${leader.fullName}`,
+      churchName: leader.churchName,
+      details: `${leader.keyPosition} • ${leader.city}, ${leader.country}`,
+      photoUrl: leader.photoUrl,
+    });
+  };
+
+  // Execute deletion upon admin modal confirmation
+  const handleExecuteDelete = () => {
+    if (!deleteModalState) return;
+
+    if (deleteModalState.type === 'registration' && deleteModalState.id) {
+      deleteRegistration(deleteModalState.id);
+      setSelectedRegIds((prev) => prev.filter((id) => id !== deleteModalState.id));
+      showToast(`Accredited registration for ${deleteModalState.name} deleted permanently.`);
+      onDataRefresh();
+    } else if (deleteModalState.type === 'bulk_registrations' && deleteModalState.ids) {
+      const count = deleteModalState.ids.length;
+      deleteModalState.ids.forEach((id) => deleteRegistration(id));
+      setSelectedRegIds([]);
+      showToast(`Successfully deleted ${count} registered ministers.`);
+      onDataRefresh();
+    } else if (deleteModalState.type === 'leader' && deleteModalState.id) {
+      deleteChurchLeader(deleteModalState.id);
+      showToast(`Church leader profile for ${deleteModalState.name} deleted.`);
+      onDataRefresh();
+    }
+
+    setDeleteModalState(null);
+  };
+
+  // Toggle leader verification status
+  const handleToggleLeaderVerification = (leader: ChurchLeader) => {
+    const updated = updateChurchLeader(leader.id, { isVerified: !leader.isVerified });
+    if (updated) {
+      showToast(`Leader ${leader.fullName} verification ${updated.isVerified ? 'enabled' : 'revoked'}.`);
+      onDataRefresh();
+    }
+  };
+
+  // Delete Registration fallback
   const handleDeleteRegistration = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete registration for ${name} (${id})?`)) {
+    const reg = registrations.find((r) => r.id === id);
+    if (reg) {
+      handleOpenDeleteMinister(reg);
+    } else {
       deleteRegistration(id);
       showToast(`Registration for ${name} deleted.`);
       onDataRefresh();
@@ -311,6 +412,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     return matchesSearch && matchesCategory;
   });
+
+  // Filter church leaders
+  const filteredLeaders = churchLeaders.filter((l) => {
+    const q = leaderSearch.toLowerCase();
+    return (
+      !leaderSearch ||
+      l.fullName.toLowerCase().includes(q) ||
+      l.churchName.toLowerCase().includes(q) ||
+      l.keyPosition.toLowerCase().includes(q) ||
+      l.city.toLowerCase().includes(q) ||
+      l.country.toLowerCase().includes(q) ||
+      (l.denomination || '').toLowerCase().includes(q)
+    );
+  });
+
+  // Selection toggle helpers
+  const handleToggleSelectAll = () => {
+    if (selectedRegIds.length === filteredRegistrations.length) {
+      setSelectedRegIds([]);
+    } else {
+      setSelectedRegIds(filteredRegistrations.map((r) => r.id));
+    }
+  };
+
+  const handleToggleSelectOne = (id: string) => {
+    setSelectedRegIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   const totalAttendeesCount = registrations.reduce(
     (acc, curr) => acc + (curr.attendeesCount || 1),
@@ -561,6 +691,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('leaders')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition cursor-pointer whitespace-nowrap ${
+            activeTab === 'leaders'
+              ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/20'
+              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+          }`}
+        >
+          <Church className="w-4 h-4 text-amber-500" />
+          <span>Presbytery Leaders ({churchLeaders.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('programmes')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition cursor-pointer whitespace-nowrap ${
             activeTab === 'programmes'
@@ -709,10 +851,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Ministers Data Table */}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">
-                Showing {filteredRegistrations.length} of {registrations.length} delegate records
-              </span>
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-600">
+                  Showing {filteredRegistrations.length} of {registrations.length} delegate records
+                </span>
+                {selectedRegIds.length > 0 && (
+                  <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-300">
+                    {selectedRegIds.length} selected
+                  </span>
+                )}
+              </div>
+
+              {/* Admin Bulk Actions */}
+              {selectedRegIds.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleOpenBulkDelete}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Delete all selected registered ministers permanently"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Selected ({selectedRegIds.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedRegIds([])}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition cursor-pointer"
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              )}
+
               <span className="text-[11px] text-amber-700 font-medium">
                 Tip: Click any row or the Edit button to update minister data
               </span>
@@ -729,6 +899,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                     <tr>
+                      <th className="py-3.5 px-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredRegistrations.length > 0 &&
+                            selectedRegIds.length === filteredRegistrations.length
+                          }
+                          onChange={handleToggleSelectAll}
+                          className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                          title="Select / Deselect all"
+                        />
+                      </th>
                       <th className="py-3.5 px-4">Delegate & ID</th>
                       <th className="py-3.5 px-4">Minister Details</th>
                       <th className="py-3.5 px-4">Programme & Church</th>
@@ -742,9 +924,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {filteredRegistrations.map((reg) => (
                       <tr
                         key={reg.id}
-                        className="hover:bg-amber-50/40 transition cursor-pointer"
+                        className={`hover:bg-amber-50/40 transition cursor-pointer ${
+                          selectedRegIds.includes(reg.id) ? 'bg-amber-50/60' : ''
+                        }`}
                         onClick={() => setEditingRegistration(reg)}
                       >
+                        {/* Select Checkbox */}
+                        <td
+                          className="py-3.5 px-3 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedRegIds.includes(reg.id)}
+                            onChange={() => handleToggleSelectOne(reg.id)}
+                            className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                          />
+                        </td>
+
                         {/* Photo & ID */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
@@ -890,15 +1087,159 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <span>Letter</span>
                             </button>
 
-                            {/* Delete button */}
+                            {/* Admin Delete button */}
                             <button
-                              onClick={() => handleDeleteRegistration(reg.id, reg.fullName)}
+                              onClick={() => handleOpenDeleteMinister(reg)}
                               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                              title="Delete registration"
+                              title="Delete registered member (Admin Only)"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: PRESBYTERY CHURCH LEADERS DIRECTORY & MANAGEMENT */}
+      {activeTab === 'leaders' && (
+        <div className="space-y-6">
+          {/* Header & Controls */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Search leaders by name, church ministry, key calling, city, or country..."
+                value={leaderSearch}
+                onChange={(e) => setLeaderSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl">
+                Total Leaders: {churchLeaders.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Leaders Table */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600">
+                Showing {filteredLeaders.length} of {churchLeaders.length} registered church leaders
+              </span>
+              <span className="text-[11px] text-amber-700 font-medium">
+                Admin controls: Toggle accredited verification or delete leader profiles
+              </span>
+            </div>
+
+            {filteredLeaders.length === 0 ? (
+              <div className="p-12 text-center text-slate-500">
+                <Church className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                <h4 className="font-bold text-slate-700">No church leaders found</h4>
+                <p className="text-xs text-slate-400 mt-1">Try resetting your search query.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                    <tr>
+                      <th className="py-3.5 px-4">Leader Profile</th>
+                      <th className="py-3.5 px-4">Ministry & Church</th>
+                      <th className="py-3.5 px-4">Location</th>
+                      <th className="py-3.5 px-4 text-center">Tenure / Calling</th>
+                      <th className="py-3.5 px-4 text-center">Accreditation</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-normal">
+                    {filteredLeaders.map((leader) => (
+                      <tr key={leader.id} className="hover:bg-amber-50/40 transition">
+                        {/* Leader Profile */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 border border-amber-400/80 shrink-0">
+                              {leader.photoUrl ? (
+                                <img
+                                  src={leader.photoUrl}
+                                  alt={leader.fullName}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center font-bold text-amber-400">
+                                  {leader.fullName.charAt(0)}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span>
+                                  {leader.title} {leader.fullName}
+                                </span>
+                                {leader.isVerified && (
+                                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                )}
+                              </div>
+                              <div className="text-xs text-amber-800 font-medium">
+                                {leader.keyPosition}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Ministry & Church */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-slate-800">{leader.churchName}</div>
+                          {leader.denomination && (
+                            <div className="text-xs text-slate-500">{leader.denomination}</div>
+                          )}
+                        </td>
+
+                        {/* Location */}
+                        <td className="py-3.5 px-4">
+                          <div className="text-slate-800 font-medium">{leader.city}</div>
+                          <div className="text-xs text-slate-500">{leader.country}</div>
+                        </td>
+
+                        {/* Tenure */}
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="text-xs font-semibold bg-slate-100 px-2 py-0.5 rounded-full text-slate-700">
+                            {leader.yearsInMinistry} yrs in Ministry
+                          </span>
+                        </td>
+
+                        {/* Verification toggle */}
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            onClick={() => handleToggleLeaderVerification(leader)}
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer border ${
+                              leader.isVerified
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                            }`}
+                          >
+                            {leader.isVerified ? 'Verified Leader' : 'Unverified'}
+                          </button>
+                        </td>
+
+                        {/* Admin Delete Action */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => handleOpenDeleteLeader(leader)}
+                            className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer ml-auto"
+                            title="Delete church leader profile (Admin Only)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1255,59 +1596,177 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* TAB 4: GALLERY MANAGEMENT */}
       {activeTab === 'gallery' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold font-serif text-slate-900">
-              Programme Gallery Archive ({gallery.length} Photos)
-            </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold font-serif text-slate-900 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-amber-600" />
+                <span>Programme Gallery Archive ({gallery.length} Photos)</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Upload new photos or edit existing archive entries (both pictures and textual descriptions).
+              </p>
+            </div>
             <button
-              onClick={onOpenGalleryModal}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              onClick={() => onOpenGalleryModal()}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
             >
               <Plus className="w-4 h-4" />
-              <span>Upload Picture</span>
+              <span>Upload New Picture</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {gallery.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between"
+          {/* Search & Category Filter Bar */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="relative w-full sm:w-80">
+              <input
+                type="text"
+                value={gallerySearch}
+                onChange={(e) => setGallerySearch(e.target.value)}
+                placeholder="Search by title, caption, tags..."
+                className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-amber-500"
+              />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              {gallerySearch && (
+                <button
+                  onClick={() => setGallerySearch('')}
+                  className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-xs font-semibold text-slate-500 shrink-0">Category:</span>
+              <select
+                value={galleryCategoryFilter}
+                onChange={(e) => setGalleryCategoryFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium text-slate-700 cursor-pointer"
               >
-                <div className="relative h-48 bg-slate-900">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute top-2 left-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-900/80 text-amber-300 text-[10px] font-bold">
-                      {item.category}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900 font-serif">{item.title}</h4>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.caption}</p>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">{item.eventDate}</span>
-                    <button
-                      onClick={() => handleDeleteGalleryItem(item.id, item.title)}
-                      className="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 p-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                <option value="All">All Categories ({gallery.length})</option>
+                {Array.from(new Set(gallery.map((g) => g.category))).map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {/* Gallery Items Grid */}
+          {(() => {
+            const filtered = gallery.filter((item) => {
+              const matchesCat =
+                galleryCategoryFilter === 'All' || item.category === galleryCategoryFilter;
+              const matchesQuery =
+                gallerySearch.trim() === '' ||
+                item.title.toLowerCase().includes(gallerySearch.toLowerCase()) ||
+                item.caption.toLowerCase().includes(gallerySearch.toLowerCase()) ||
+                (item.programmeTitle &&
+                  item.programmeTitle.toLowerCase().includes(gallerySearch.toLowerCase())) ||
+                (item.tags &&
+                  item.tags.some((t) => t.toLowerCase().includes(gallerySearch.toLowerCase())));
+              return matchesCat && matchesQuery;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center max-w-md mx-auto">
+                  <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h3 className="text-base font-bold text-slate-800">No Photo Matches Found</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Try clearing your search query or selecting a different category filter.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setGallerySearch('');
+                      setGalleryCategoryFilter('All');
+                    }}
+                    className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-lg transition"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filtered.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
+                  >
+                    <div className="relative h-48 bg-slate-900 group">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-900/85 text-amber-300 text-[10px] font-bold border border-amber-400/30">
+                          {item.category}
+                        </span>
+                      </div>
+                      <div className="absolute top-2 right-2">
+                        <span className="px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-medium">
+                          {item.eventDate}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-1.5">
+                        <h4 className="font-bold text-sm text-slate-900 font-serif line-clamp-1">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {item.caption}
+                        </p>
+                        {item.programmeTitle && (
+                          <div className="text-[11px] text-amber-700 font-medium truncate pt-1">
+                            📌 {item.programmeTitle}
+                          </div>
+                        )}
+                        {item.tags && item.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {item.tags.map((t, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600"
+                              >
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onOpenGalleryModal(item)}
+                          className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition border border-amber-200"
+                        >
+                          <Edit className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Edit Photo & Words</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteGalleryItem(item.id, item.title)}
+                          className="px-2.5 py-1.5 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg font-semibold flex items-center gap-1 cursor-pointer transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1442,6 +1901,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           registration={selectedBadgeReg}
           programme={programmes.find((p) => p.id === selectedBadgeReg.programmeId)}
         />
+      )}
+
+      {/* Admin Delete Confirmation Modal (Admin-Only Restriction) */}
+      {deleteModalState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-600 mb-4 pb-3 border-b border-red-100">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {deleteModalState.type === 'bulk_registrations'
+                    ? `Delete ${deleteModalState.ids?.length} Registered Members?`
+                    : `Delete ${deleteModalState.type === 'leader' ? 'Church Leader' : 'Registered Member'}?`}
+                </h3>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  <span>Admin-Only Authority</span>
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+              This action is restricted exclusively to Secretariat Administrators. This will permanently remove
+              the record, revoke delegate accreditation, and invalidate any issued QR gate passes.
+            </p>
+
+            {deleteModalState.name && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-5 space-y-1.5 text-xs">
+                <div className="flex items-center gap-3">
+                  {deleteModalState.photoUrl ? (
+                    <img
+                      src={deleteModalState.photoUrl}
+                      alt={deleteModalState.name}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-lg object-cover border border-slate-300 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-slate-900 text-amber-400 font-bold flex items-center justify-center shrink-0 text-sm">
+                      {deleteModalState.name.charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-bold text-slate-900 text-sm">{deleteModalState.name}</div>
+                    {deleteModalState.churchName && (
+                      <div className="text-slate-600 flex items-center gap-1 mt-0.5">
+                        <Church className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{deleteModalState.churchName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {deleteModalState.details && (
+                  <div className="text-slate-500 font-mono text-[11px] pt-1 border-t border-slate-200/60">
+                    {deleteModalState.details}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDeleteModalState(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer border border-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                className="px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Confirm & Delete Permanently</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

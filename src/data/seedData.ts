@@ -515,9 +515,9 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   termsNotice:
     'By completing registration, delegates agree to uphold Christian decorum, mutual ministerial honor, and spiritual fellowship throughout the programme sessions.',
 
-  // Secretariat Headquarters & Contacts
+  // Ministers Connect Headquarters & Contacts
   headquartersAddress:
-    'Maitama District, Abuja (FCT), Nigeria',
+    'Ministers Connect Headquarters, Maitama District, Abuja (FCT), Nigeria',
   supportEmail: 'secretariat@ministersconnect.org',
   supportPhone: '09110376410 | 08131587655 | 070 31216586',
   whatsappContact: '09110376410',
