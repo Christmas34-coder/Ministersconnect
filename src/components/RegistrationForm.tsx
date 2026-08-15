@@ -1420,55 +1420,60 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 </div>
               </div>
 
-              {/* In-Page Submit Action Bar */}
-              <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-amber-500/30 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Instant Accreditation Certification</span>
+              {/* In-Page Submit Action Bar - Made Extra Prominent & Clear */}
+              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white rounded-3xl p-6 sm:p-8 border-2 border-amber-400 shadow-2xl space-y-4">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="space-y-1.5 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-xs font-black uppercase tracking-wider">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>Final Step • Official Accreditation</span>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black font-serif text-white">
+                      Complete Registration & Generate Letter
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+                      Click the big golden button on the right to instantly issue your <strong>Registration ID</strong>, 
+                      official <strong>Confirmation Letter (PDF)</strong>, and <strong>Digital Accreditation Badge</strong>.
+                    </p>
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold font-serif text-white">
-                    Ready to Generate Your Official Confirmation Letter?
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Clicking below will issue your unique Registration ID and download-ready PDF document.
-                  </p>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 text-base font-black rounded-2xl shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2.5 transition transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 shrink-0"
-                >
-                  {submitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                      <span>Processing Official Accreditation...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5" />
-                      <span>Submit & Download Confirmation Letter</span>
-                    </div>
-                  )}
-                </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    id="primary-submit-registration-btn"
+                    className="w-full md:w-auto px-10 py-5 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-slate-950 text-base sm:text-lg font-black rounded-2xl shadow-xl shadow-amber-400/30 flex items-center justify-center gap-3 transition transform hover:scale-[1.02] cursor-pointer disabled:opacity-50 border-2 border-white/80 shrink-0 ring-4 ring-amber-400/30"
+                  >
+                    {submitting ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 border-3 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                        <span>Submitting Accreditation...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-slate-950 fill-amber-300" />
+                        <span>SUBMIT REGISTRATION NOW</span>
+                        <ArrowRight className="w-5 h-5 text-slate-950" />
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              {/* Sticky Floating Bottom Bar for Easy Submission */}
-              <div className="fixed bottom-0 left-0 right-0 z-30 bg-slate-950/90 backdrop-blur-md border-t border-amber-500/30 p-3 sm:p-4 shadow-2xl">
+              {/* Sticky Floating Bottom Bar for Easy Submission on Any Device */}
+              <div className="fixed bottom-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-lg border-t-2 border-amber-400 p-3 sm:p-4 shadow-2xl">
                 <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-                  <div className="hidden sm:flex items-center gap-2 text-white text-xs">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>
-                      Accrediting for: <strong>{selectedProgramme?.title}</strong>
+                  <div className="hidden sm:flex items-center gap-2.5 text-white text-xs">
+                    <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <span className="truncate">
+                      Ready to register for: <strong className="text-amber-300">{selectedProgramme?.title}</strong>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                     <button
                       type="button"
                       onClick={onCancel}
-                      className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-semibold transition cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-bold transition cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -1476,14 +1481,15 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex-1 sm:flex-initial px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 text-xs sm:text-sm font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      id="sticky-submit-registration-btn"
+                      className="flex-1 sm:flex-initial px-8 py-3 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-slate-950 text-sm sm:text-base font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 border border-white/60 ring-2 ring-amber-400/40"
                     >
                       {submitting ? (
                         <span>Processing...</span>
                       ) : (
                         <>
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Submit & Generate Letter (PDF)</span>
+                          <CheckCircle className="w-5 h-5 fill-amber-300 text-slate-950" />
+                          <span>SUBMIT REGISTRATION</span>
                         </>
                       )}
                     </button>

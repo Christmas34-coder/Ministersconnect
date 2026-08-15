@@ -22,6 +22,30 @@ import {
   MINISTERS_CONNECT_FLIER_LANDSCAPE,
   MINISTERS_CONNECT_FLIER_PORTRAIT,
 } from '../assets/flierImage';
+import {
+  syncAddProgrammeToCloud,
+  syncUpdateProgrammeToCloud,
+  syncDeleteProgrammeFromCloud,
+  syncAddRegistrationToCloud,
+  syncUpdateRegistrationToCloud,
+  syncDeleteRegistrationFromCloud,
+  syncAddMemberToCloud,
+  syncUpdateMemberToCloud,
+  syncDeleteMemberFromCloud,
+  syncAddChurchLeaderToCloud,
+  syncUpdateChurchLeaderToCloud,
+  syncDeleteChurchLeaderFromCloud,
+  syncAddSermonToCloud,
+  syncUpdateSermonToCloud,
+  syncDeleteSermonFromCloud,
+  syncAddGalleryItemToCloud,
+  syncUpdateGalleryItemToCloud,
+  syncDeleteGalleryItemFromCloud,
+  syncUpdateSiteSettingsToCloud,
+  syncAddAdminUserToCloud,
+  syncUpdateAdminUserToCloud,
+  syncDeleteAdminUserFromCloud,
+} from '../services/firebaseSync';
 
 const KEYS = {
   PROGRAMMES: 'mc_programmes_v3',
@@ -78,6 +102,7 @@ export function addProgramme(programme: Omit<Programme, 'id' | 'registeredCount'
   };
   const updated = [newProg, ...current];
   saveProgrammes(updated);
+  syncAddProgrammeToCloud(newProg);
   return newProg;
 }
 
@@ -87,6 +112,7 @@ export function updateProgramme(id: string, updates: Partial<Programme>): Progra
   if (index === -1) return null;
   current[index] = { ...current[index], ...updates };
   saveProgrammes(current);
+  syncUpdateProgrammeToCloud(id, updates);
   return current[index];
 }
 
@@ -95,6 +121,7 @@ export function deleteProgramme(id: string): boolean {
   const filtered = current.filter((p) => p.id !== id);
   if (filtered.length !== current.length) {
     saveProgrammes(filtered);
+    syncDeleteProgrammeFromCloud(id);
     return true;
   }
   return false;
@@ -135,13 +162,16 @@ export function addRegistration(regData: Omit<Registration, 'id' | 'registeredAt
   };
   const updated = [newReg, ...current];
   saveRegistrations(updated);
+  syncAddRegistrationToCloud(newReg);
 
   // Increment registeredCount on corresponding programme
   const programmes = getProgrammes();
   const progIdx = programmes.findIndex((p) => p.id === regData.programmeId);
   if (progIdx !== -1) {
-    programmes[progIdx].registeredCount = (programmes[progIdx].registeredCount || 0) + (regData.attendeesCount || 1);
+    const newCount = (programmes[progIdx].registeredCount || 0) + (regData.attendeesCount || 1);
+    programmes[progIdx].registeredCount = newCount;
     saveProgrammes(programmes);
+    syncUpdateProgrammeToCloud(regData.programmeId, { registeredCount: newCount });
   }
 
   return newReg;
@@ -153,6 +183,7 @@ export function updateRegistration(id: string, updates: Partial<Registration>): 
   if (index === -1) return null;
   current[index] = { ...current[index], ...updates };
   saveRegistrations(current);
+  syncUpdateRegistrationToCloud(id, updates);
   return current[index];
 }
 
@@ -162,13 +193,16 @@ export function deleteRegistration(id: string): boolean {
   if (!target) return false;
   const filtered = current.filter((r) => r.id !== id);
   saveRegistrations(filtered);
+  syncDeleteRegistrationFromCloud(id);
 
   // Decrease registered count
   const programmes = getProgrammes();
   const progIdx = programmes.findIndex((p) => p.id === target.programmeId);
   if (progIdx !== -1) {
-    programmes[progIdx].registeredCount = Math.max(0, (programmes[progIdx].registeredCount || 0) - (target.attendeesCount || 1));
+    const newCount = Math.max(0, (programmes[progIdx].registeredCount || 0) - (target.attendeesCount || 1));
+    programmes[progIdx].registeredCount = newCount;
     saveProgrammes(programmes);
+    syncUpdateProgrammeToCloud(target.programmeId, { registeredCount: newCount });
   }
 
   return true;
@@ -218,6 +252,7 @@ export function addGalleryItem(item: Omit<GalleryItem, 'id'>): GalleryItem {
   };
   const updated = [newItem, ...current];
   saveGallery(updated);
+  syncAddGalleryItemToCloud(newItem);
   return newItem;
 }
 
@@ -236,6 +271,7 @@ export function updateGalleryItem(
   });
   if (updatedItem) {
     saveGallery(updated);
+    syncUpdateGalleryItemToCloud(id, updates);
   }
   return updatedItem;
 }
@@ -245,6 +281,7 @@ export function deleteGalleryItem(id: string): boolean {
   const filtered = current.filter((g) => g.id !== id);
   if (filtered.length !== current.length) {
     saveGallery(filtered);
+    syncDeleteGalleryItemFromCloud(id);
     return true;
   }
   return false;
@@ -278,11 +315,13 @@ export function updateSiteSettings(updates: Partial<SiteSettings>): SiteSettings
   const current = getSiteSettings();
   const updated = { ...current, ...updates };
   saveSiteSettings(updated);
+  syncUpdateSiteSettingsToCloud(updated);
   return updated;
 }
 
 export function resetSiteSettingsToDefault(): SiteSettings {
   saveSiteSettings(DEFAULT_SITE_SETTINGS);
+  syncUpdateSiteSettingsToCloud(DEFAULT_SITE_SETTINGS);
   return DEFAULT_SITE_SETTINGS;
 }
 
@@ -325,6 +364,7 @@ export function addAdminUser(adminData: Omit<AdminUser, 'id' | 'createdAt'>): Ad
   };
   const updated = [...current, newAdmin];
   saveAdminUsers(updated);
+  syncAddAdminUserToCloud(newAdmin);
   return newAdmin;
 }
 
@@ -334,6 +374,7 @@ export function updateAdminUser(id: string, updates: Partial<AdminUser>): AdminU
   if (index === -1) return null;
   current[index] = { ...current[index], ...updates };
   saveAdminUsers(current);
+  syncUpdateAdminUserToCloud(id, updates);
   const currentLogged = getCurrentAdmin();
   if (currentLogged && currentLogged.id === id) {
     setCurrentAdmin(current[index]);
@@ -349,6 +390,7 @@ export function deleteAdminUser(id: string): boolean {
   }
   const filtered = current.filter((a) => a.id !== id);
   saveAdminUsers(filtered);
+  syncDeleteAdminUserFromCloud(id);
   return true;
 }
 
@@ -478,6 +520,7 @@ export function registerMember(memberData: Omit<MemberUser, 'id' | 'createdAt'>)
 
   const updated = [newMember, ...members];
   saveMembers(updated);
+  syncAddMemberToCloud(newMember);
   setCurrentMember(newMember);
   return { success: true, member: newMember };
 }
@@ -502,6 +545,7 @@ export function authenticateMember(
   const updatedMember = { ...match, lastLoginAt: new Date().toISOString() };
   const updatedMembers = members.map((m) => (m.id === match.id ? updatedMember : m));
   saveMembers(updatedMembers);
+  syncUpdateMemberToCloud(match.id, { lastLoginAt: updatedMember.lastLoginAt });
   setCurrentMember(updatedMember);
   return { success: true, member: updatedMember };
 }
@@ -514,6 +558,7 @@ export function updateMemberProfile(id: string, updates: Partial<MemberUser>): M
   const updated = { ...members[idx], ...updates };
   members[idx] = updated;
   saveMembers(members);
+  syncUpdateMemberToCloud(id, updates);
 
   const current = getCurrentMember();
   if (current && current.id === id) {
@@ -532,6 +577,7 @@ export function deleteMemberUser(id: string): boolean {
   const filtered = members.filter((m) => m.id !== id);
   if (filtered.length !== members.length) {
     saveMembers(filtered);
+    syncDeleteMemberFromCloud(id);
     const current = getCurrentMember();
     if (current && current.id === id) {
       setCurrentMember(null);
@@ -574,6 +620,7 @@ export function addChurchLeader(leaderData: Omit<ChurchLeader, 'id' | 'registere
   };
   const updated = [newLeader, ...current];
   saveChurchLeaders(updated);
+  syncAddChurchLeaderToCloud(newLeader);
   return newLeader;
 }
 
@@ -583,6 +630,7 @@ export function updateChurchLeader(id: string, updates: Partial<ChurchLeader>): 
   if (idx === -1) return null;
   current[idx] = { ...current[idx], ...updates };
   saveChurchLeaders(current);
+  syncUpdateChurchLeaderToCloud(id, updates);
   return current[idx];
 }
 
@@ -591,6 +639,7 @@ export function deleteChurchLeader(id: string): boolean {
   const filtered = current.filter((l) => l.id !== id);
   if (filtered.length !== current.length) {
     saveChurchLeaders(filtered);
+    syncDeleteChurchLeaderFromCloud(id);
     return true;
   }
   return false;
@@ -630,6 +679,7 @@ export function addSermon(sermonData: Omit<SermonMedia, 'id' | 'uploadedAt' | 'v
   };
   const updated = [newSermon, ...current];
   saveSermons(updated);
+  syncAddSermonToCloud(newSermon);
   return newSermon;
 }
 
@@ -639,6 +689,7 @@ export function updateSermon(id: string, updates: Partial<SermonMedia>): SermonM
   if (idx === -1) return null;
   current[idx] = { ...current[idx], ...updates };
   saveSermons(current);
+  syncUpdateSermonToCloud(id, updates);
   return current[idx];
 }
 
@@ -647,6 +698,7 @@ export function deleteSermon(id: string): boolean {
   const filtered = current.filter((s) => s.id !== id);
   if (filtered.length !== current.length) {
     saveSermons(filtered);
+    syncDeleteSermonFromCloud(id);
     return true;
   }
   return false;
@@ -656,8 +708,10 @@ export function incrementSermonPlays(id: string): void {
   const current = getSermons();
   const idx = current.findIndex((s) => s.id === id);
   if (idx !== -1) {
-    current[idx].viewsOrPlays = (current[idx].viewsOrPlays || 0) + 1;
+    const newPlays = (current[idx].viewsOrPlays || 0) + 1;
+    current[idx].viewsOrPlays = newPlays;
     saveSermons(current);
+    syncUpdateSermonToCloud(id, { viewsOrPlays: newPlays });
   }
 }
 
@@ -665,8 +719,10 @@ export function incrementSermonDownloads(id: string): void {
   const current = getSermons();
   const idx = current.findIndex((s) => s.id === id);
   if (idx !== -1) {
-    current[idx].downloadCount = (current[idx].downloadCount || 0) + 1;
+    const newDownloads = (current[idx].downloadCount || 0) + 1;
+    current[idx].downloadCount = newDownloads;
     saveSermons(current);
+    syncUpdateSermonToCloud(id, { downloadCount: newDownloads });
   }
 }
 

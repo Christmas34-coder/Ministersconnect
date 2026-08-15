@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ministers Connect Database Schema",
+  "description": "Firestore schema for Ministers Connect Accreditation, Programmes, Directory, and Media Portal",
+  "entities": {
+    "programmes": {
+      "title": "Programme",
+      "description": "Church conferences, ministerial summits, and fellowship programmes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "theme": { "type": "string" },
+        "date": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "time": { "type": "string" },
+        "venue": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "country": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "bannerUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed", "cancelled"] },
+        "capacity": { "type": "number" },
+        "registeredCount": { "type": "number" },
+        "schedule": { "type": "array" },
+        "fastingRequirement": { "type": "string" },
+        "speakers": { "type": "array" },
+        "flyerUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "startDate", "endDate", "venue", "category", "status"]
+    },
+    "registrations": {
+      "title": "Registration",
+      "description": "Ministerial delegate accreditations and event bookings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "churchName": { "type": "string" },
+        "denomination": { "type": "string" },
+        "ministerialPosition": { "type": "string" },
+        "customPosition": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "country": { "type": "string" },
+        "programmeId": { "type": "string" },
+        "programmeTitle": { "type": "string" },
+        "arrivalDate": { "type": "string" },
+        "departureDate": { "type": "string" },
+        "attendeesCount": { "type": "number" },
+        "attendeeNames": { "type": "array", "items": { "type": "string" } },
+        "specialRequirements": { "type": "string" },
+        "prayerRequests": { "type": "string" },
+        "passportPhotoUrl": { "type": "string" },
+        "registeredAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["confirmed", "pending", "cancelled"] },
+        "checkInStatus": { "type": "string", "enum": ["checked_in", "not_checked_in"] },
+        "checkedInAt": { "type": "string" },
+        "qrCodeData": { "type": "string" }
+      },
+      "required": ["id", "title", "fullName", "email", "phone", "churchName", "programmeId", "arrivalDate", "attendeesCount", "registeredAt", "status", "checkInStatus"]
+    },
+    "members": {
+      "title": "MemberUser",
+      "description": "Registered ministers and attendees accounts with passwords",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "title": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "churchName": { "type": "string" },
+        "denomination": { "type": "string" },
+        "ministerialPosition": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "country": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
+      },
+      "required": ["id", "email", "title", "fullName", "phone", "churchName", "ministerialPosition", "city", "country", "createdAt"]
+    },
+    "church_leaders": {
+      "title": "ChurchLeader",
+      "description": "Presbytery directory of church ministers and guest speakers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "fullName": { "type": "string" },
+        "role": { "type": "string" },
+        "churchName": { "type": "string" },
+        "location": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "registeredAt": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "socialMedia": { "type": "object" }
+      },
+      "required": ["id", "title", "fullName", "role", "churchName", "location", "registeredAt"]
+    },
+    "sermons": {
+      "title": "SermonMedia",
+      "description": "Audio messages, video sermons, and ministerial study materials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "preacher": { "type": "string" },
+        "programmeTitle": { "type": "string" },
+        "date": { "type": "string" },
+        "duration": { "type": "string" },
+        "category": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["audio", "video", "pdf"] },
+        "mediaUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "bibleReference": { "type": "string" },
+        "downloadUrl": { "type": "string" },
+        "uploadedAt": { "type": "string" },
+        "viewsOrPlays": { "type": "number" },
+        "downloadCount": { "type": "number" }
+      },
+      "required": ["id", "title", "preacher", "date", "mediaType", "mediaUrl", "uploadedAt"]
+    },
+    "gallery": {
+      "title": "GalleryItem",
+      "description": "Media photos and event moments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "category": { "type": "string" },
+        "programmeId": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "title", "imageUrl", "category", "date"]
+    },
+    "site_settings": {
+      "title": "SiteSettings",
+      "description": "Global ministry settings and configuration",
+      "type": "object",
+      "properties": {
+        "ministryName": { "type": "string" },
+        "heroTagline": { "type": "string" },
+        "announcement": { "type": "string" },
+        "adminPasscode": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "facebookUrl": { "type": "string" },
+        "youtubeUrl": { "type": "string" },
+        "instagramUrl": { "type": "string" }
+      },
+      "required": ["ministryName"]
+    },
+    "admin_users": {
+      "title": "AdminUser",
+      "description": "Presbytery administrators and secretariat staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "passcode": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "isPrimaryOwner": { "type": "boolean" }
+      },
+      "required": ["id", "email", "name", "role", "passcode", "createdAt"]
+    }
+  }
+}

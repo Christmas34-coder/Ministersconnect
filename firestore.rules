@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Programmes: Publicly readable, writeable by app users and admins
+    match /programmes/{programmeId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // Registrations: Publicly creatable and readable for self-lookup and admin validation
+    match /registrations/{registrationId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Members: Publicly creatable, readable for authentication and directory
+    match /members/{memberId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Church Leaders: Publicly readable and editable
+    match /church_leaders/{leaderId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Sermons: Publicly readable and editable
+    match /sermons/{sermonId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Gallery: Publicly readable and editable
+    match /gallery/{itemId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Site Settings: Publicly readable and updateable
+    match /site_settings/{settingId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Admin Users
+    match /admin_users/{adminId} {
+      allow read, create, update, delete: if true;
+    }
+  }
+}

@@ -25,6 +25,7 @@ import {
   getSermons,
   addSermon,
 } from './utils/storage';
+import { initFirebaseSync, subscribeToDataChanges } from './services/firebaseSync';
 import { Navbar, AppTab } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomeHero } from './components/HomeHero';
@@ -74,7 +75,7 @@ export function App() {
   const [isGalleryUploadOpen, setIsGalleryUploadOpen] = useState(false);
   const [galleryItemToEdit, setGalleryItemToEdit] = useState<GalleryItem | null>(null);
 
-  // Load data on mount
+  // Load data on mount and subscribe to real-time Firestore sync
   const refreshData = () => {
     try {
       setProgrammes(getProgrammes());
@@ -91,6 +92,15 @@ export function App() {
 
   useEffect(() => {
     refreshData();
+    const cleanupSync = initFirebaseSync();
+    const unsubscribeListeners = subscribeToDataChanges(() => {
+      refreshData();
+    });
+
+    return () => {
+      cleanupSync();
+      unsubscribeListeners();
+    };
   }, []);
 
   const handleUpdateSiteSettings = (updated: SiteSettings) => {
