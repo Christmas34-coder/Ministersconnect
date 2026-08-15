@@ -80,7 +80,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <UserCheck className="w-5 h-5" />
-              <span>Register for Convocation</span>
+              <span>Register for August Programme</span>
             </button>
 
             <button
@@ -122,7 +122,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               <div className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
                 {totalProgrammesCount}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">Active Convocations</div>
+              <div className="text-xs text-slate-400 mt-0.5">Active Programmes</div>
             </div>
             <div className="p-3">
               <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-serif">
@@ -140,7 +140,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
         </div>
       </section>
 
-      {/* Featured Convocation Showcase Section */}
+      {/* Featured Programme Showcase Section */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/40 border-2 border-amber-500/40 rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 text-white">
           {/* Image & Interactive Flyer Card */}
@@ -164,7 +164,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
             <div className="mt-3 flex items-center justify-between w-full max-w-sm text-xs text-slate-400 px-1">
               <span className="flex items-center gap-1 text-amber-400 font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Official Convocation Poster</span>
+                <span>Official Programme Poster</span>
               </span>
               <button
                 type="button"
@@ -266,7 +266,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 }}
                 className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm rounded-xl transition shadow-md cursor-pointer flex items-center gap-2"
               >
-                <span>Register for this Convocation</span>
+                <span>Register for August Programme</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -283,7 +283,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 onClick={() => onNavigate('programmes')}
                 className="px-4 py-3 bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-semibold text-xs sm:text-sm rounded-xl transition cursor-pointer"
               >
-                All Convocations
+                All Programmes
               </button>
             </div>
           </div>
@@ -334,7 +334,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 Sermons, Audio, Video & Study Notes
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
-                Stream anointed audio messages, watch video sermons from past convocations, download theological study outlines, or upload new message recordings for the delegates.
+                Stream anointed audio messages, watch video sermons from past programmes, download theological study outlines, or upload new message recordings for the delegates.
               </p>
             </div>
             <button

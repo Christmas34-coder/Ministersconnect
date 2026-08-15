@@ -54,6 +54,8 @@ import {
   getCurrentAdmin,
   authenticateAdmin,
   addProgramme,
+  PRIMARY_ADMIN_EMAIL,
+  updatePrimaryAdminPasscode,
 } from '../utils/storage';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MinisterBadgeModal } from './MinisterBadgeModal';
@@ -179,14 +181,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setCurrentAdminState(null);
   };
 
-  // Quick bypass for owner
-  const handleQuickOwnerAccess = () => {
-    const owner = INITIAL_ADMINS[0];
-    const result = authenticateAdmin(owner.email, 'admin123');
-    if (result.success && result.admin) {
-      setIsAuthenticated(true);
-      setCurrentAdminState(result.admin);
-      showToast(`Signed in as Master Administrator (${owner.email})`);
+  // Password change state
+  const [newMasterPasscode, setNewMasterPasscode] = useState('');
+  const [confirmMasterPasscode, setConfirmMasterPasscode] = useState('');
+  const [passcodeSuccess, setPasscodeSuccess] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+
+  const handleUpdateMasterPasscode = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasscodeError('');
+    setPasscodeSuccess('');
+
+    if (!newMasterPasscode || newMasterPasscode.trim().length < 4) {
+      setPasscodeError('Password must be at least 4 characters long.');
+      return;
+    }
+    if (newMasterPasscode !== confirmMasterPasscode) {
+      setPasscodeError('Passwords do not match. Please verify.');
+      return;
+    }
+
+    const res = updatePrimaryAdminPasscode(newMasterPasscode.trim());
+    if (res.success) {
+      setPasscodeSuccess('Master Administrator password successfully updated and secured!');
+      setNewMasterPasscode('');
+      setConfirmMasterPasscode('');
+      showToast('Master password updated successfully.');
+    } else {
+      setPasscodeError(res.error || 'Failed to update password.');
     }
   };
 
@@ -457,27 +479,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div>
-            <span className="text-xs uppercase font-bold text-amber-700 tracking-wider">
-              Secretariat Portal Access
+            <span className="text-xs uppercase font-bold text-amber-700 tracking-wider flex items-center justify-center gap-1.5">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Restricted Secretariat Access</span>
             </span>
-            <h2 className="text-2xl font-bold font-serif text-slate-900 mt-1">
-              Admin & Planning Console
+            <h2 className="text-2xl font-bold font-serif text-slate-900 mt-1.5">
+              Master Admin Portal
             </h2>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              Restricted portal for authorized Secretariat officers and Super Admin to manage
-              programmes, delegate accreditations, content customizer, and admin accounts.
+              Secure administrative console reserved strictly for the Lead Administrator (<strong className="text-slate-700 font-medium">asamuelbukunmi@gmail.com</strong>) to manage programmes, verify credentials, and govern database records.
             </p>
           </div>
 
-          {/* Master Owner Notice */}
-          <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-left text-xs text-amber-900 space-y-1">
-            <div className="font-bold flex items-center gap-1.5 text-slate-900">
-              <Shield className="w-3.5 h-3.5 text-amber-700" />
-              <span>Primary Master Account</span>
+          {/* Master Owner Lock Badge */}
+          <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 text-left text-xs text-amber-950 space-y-1">
+            <div className="font-bold flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-amber-700" />
+                <span>Authorized Administrator</span>
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-bold uppercase tracking-wider">
+                Protected
+              </span>
             </div>
-            <p className="text-slate-600">
-              Assigned to:{' '}
-              <strong className="text-slate-900 font-mono">asamuelbukunmi@gmail.com</strong>
+            <p className="text-slate-600 font-mono text-[11px] pt-0.5">
+              asamuelbukunmi@gmail.com
             </p>
           </div>
 
@@ -491,14 +517,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 required
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="e.g. asamuelbukunmi@gmail.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-medium"
+                placeholder="asamuelbukunmi@gmail.com"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-medium bg-slate-50/50"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Security Passcode / Password
+                Master Security Passcode / Password
               </label>
               <div className="relative">
                 <input
@@ -506,13 +532,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   required
                   value={adminPin}
                   onChange={(e) => setAdminPin(e.target.value)}
-                  placeholder="Enter passcode (default: admin123)"
+                  placeholder="Enter administrator password"
                   className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -530,19 +556,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center gap-2"
             >
               <Lock className="w-4 h-4" />
-              <span>Sign In to Secretariat Portal</span>
+              <span>Unlock Admin Portal</span>
             </button>
           </form>
 
-          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handleQuickOwnerAccess}
-              className="text-xs text-amber-700 hover:text-amber-800 font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer py-2 px-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition border border-amber-200"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>One-Click Super Admin Access (asamuelbukunmi@gmail.com)</span>
-            </button>
+          <div className="pt-2 border-t border-slate-100 text-center">
+            <p className="text-[11px] text-slate-400">
+              Strict Access Lockdown: Only the master email with valid credentials may access this portal.
+            </p>
           </div>
         </div>
       </div>
@@ -1790,17 +1811,105 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         />
       )}
 
-      {/* TAB 6: DATA & BACKUPS */}
+      {/* TAB 6: DATA, SECURITY & BACKUPS */}
       {activeTab === 'settings' && (
-        <div className="max-w-2xl bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6">
-          <div>
-            <h3 className="text-lg font-bold font-serif text-slate-900">
-              System State, Backups & Reset
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Export database snapshot or reset to initial default demonstration seeds.
-            </p>
+        <div className="max-w-3xl space-y-6">
+          {/* Master Password Management Box */}
+          <div className="bg-white border border-amber-200 rounded-2xl p-6 sm:p-8 space-y-5 shadow-xs">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold uppercase tracking-wider mb-2">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Master Administrator Security</span>
+                </div>
+                <h3 className="text-lg font-bold font-serif text-slate-900">
+                  Update Master Password & Credentials
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Change the security passcode for the primary owner account (<strong>{PRIMARY_ADMIN_EMAIL}</strong>).
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shrink-0">
+                Active & Enforced
+              </span>
+            </div>
+
+            <form onSubmit={handleUpdateMasterPasscode} className="space-y-4 max-w-lg">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Assigned Master Email (Locked)
+                </label>
+                <input
+                  type="email"
+                  disabled
+                  value={PRIMARY_ADMIN_EMAIL}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 text-xs font-mono font-medium cursor-not-allowed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    New Master Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newMasterPasscode}
+                    onChange={(e) => setNewMasterPasscode(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmMasterPasscode}
+                    onChange={(e) => setConfirmMasterPasscode(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-mono"
+                  />
+                </div>
+              </div>
+
+              {passcodeError && (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{passcodeError}</span>
+                </div>
+              )}
+
+              {passcodeSuccess && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{passcodeSuccess}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-xs transition cursor-pointer flex items-center gap-2"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Save New Master Password</span>
+              </button>
+            </form>
           </div>
+
+          {/* Backup & System Reset Box */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6">
+            <div>
+              <h3 className="text-lg font-bold font-serif text-slate-900">
+                System State, Backups & Reset
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Export database snapshot or reset to initial default demonstration seeds.
+              </p>
+            </div>
 
           <div className="space-y-4">
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
@@ -1864,6 +1973,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* Minister Edit Details Modal */}

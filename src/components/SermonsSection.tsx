@@ -1,10 +1,771 @@
 import React, { useState, useRef } from 'react';
-import { FileAudio, Film, FileText, Play, Pause, Download, Search, Plus, Clock, Calendar, BookOpen, Church, Sparkles, Share2, Volume2, VolumeX, X, Eye, CheckCircle, Headphones, Maximize2
+import {
+  FileAudio,
+  Film,
+  FileText,
+  Play,
+  Pause,
+  Download,
+  Search,
+  Plus,
+  Clock,
+  BookOpen,
+  Church,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  X,
+  ShieldAlert,
+  Lock,
 } from 'lucide-react';
 import { SermonMedia, MediaType, MemberUser } from '../types';
 import { incrementSermonPlays, incrementSermonDownloads } from '../utils/storage';
-import { SermonUploadModal } from './SermonUploadModal'; interface SermonsSectionProps { sermons: SermonMedia[]; onAddSermonSuccess: (newSermon: SermonMedia) => void; currentMember: MemberUser | null; onRequestSignIn: () => void;
-} const CATEGORIES = [ 'All Categories', 'Apostolic Leadership', 'Spiritual Growth & Discipleship', 'Church Governance & Administration', 'Prayer & Spiritual Warfare', 'Pastoral Care & Wellness', 'Youth & NextGen Ministry', 'Syllabus & Study Outlines',
-]; export const SermonsSection: React.FC<SermonsSectionProps> = ({ sermons, onAddSermonSuccess, currentMember, onRequestSignIn,
-}) => { const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all'); const [selectedCategory, setSelectedCategory] = useState('All Categories'); const [searchQuery, setSearchQuery] = useState(''); const [isUploadModalOpen, setIsUploadModalOpen] = useState(false); // Audio Player State const [currentPlayingAudio, setCurrentPlayingAudio] = useState<SermonMedia | null>(null); const [isPlaying, setIsPlaying] = useState(false); const [audioProgress, setAudioProgress] = useState(0); const [audioDuration, setAudioDuration] = useState(0); const [isMuted, setIsMuted] = useState(false); const audioRef = useRef<HTMLAudioElement | null>(null); // Video Modal State const [activeVideoSermon, setActiveVideoSermon] = useState<SermonMedia | null>(null); const filteredSermons = sermons.filter((sermon) => { const query = searchQuery.toLowerCase().trim(); const matchesSearch = !query || sermon.title.toLowerCase().includes(query) || sermon.speaker.toLowerCase().includes(query) || (sermon.churchName && sermon.churchName.toLowerCase().includes(query)) || (sermon.scriptureRef && sermon.scriptureRef.toLowerCase().includes(query)) || (sermon.description && sermon.description.toLowerCase().includes(query)); const matchesType = selectedMediaType === 'all' || sermon.mediaType === selectedMediaType; const matchesCategory = selectedCategory === 'All Categories' || sermon.category === selectedCategory; return matchesSearch && matchesType && matchesCategory; }); const handlePlayAudio = (sermon: SermonMedia) => { if (currentPlayingAudio?.id === sermon.id) { if (isPlaying) { audioRef.current?.pause(); setIsPlaying(false); } else { audioRef.current?.play(); setIsPlaying(true); } } else { setCurrentPlayingAudio(sermon); setIsPlaying(true); incrementSermonPlays(sermon.id); if (audioRef.current) { audioRef.current.src = sermon.mediaUrl; audioRef.current.play().catch((e) => console.log('Audio playback error', e)); } } }; const handleTimeUpdate = () => { if (audioRef.current) { const current = audioRef.current.currentTime; const total = audioRef.current.duration || 1; setAudioProgress((current / total) * 100); setAudioDuration(audioRef.current.duration || 0); } }; const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => { if (audioRef.current && audioRef.current.duration) { const newTime = (parseFloat(e.target.value) / 100) * audioRef.current.duration; audioRef.current.currentTime = newTime; setAudioProgress(parseFloat(e.target.value)); } }; const handleDownload = (sermon: SermonMedia, urlToDownload?: string) => { incrementSermonDownloads(sermon.id); const targetUrl = urlToDownload || sermon.fileUrl || sermon.mediaUrl; if (targetUrl) { const link = document.createElement('a'); link.href = targetUrl; link.download = sermon.fileName || `${sermon.title.replace(/\s+/g, '_')}.${sermon.mediaType === 'audio' ? 'mp3' : sermon.mediaType === 'file' ? 'pdf' : 'mp4'}`; link.target = '_blank'; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }; const formatTime = (seconds: number) => { if (isNaN(seconds)) return '0:00'; const mins = Math.floor(seconds / 60); const secs = Math.floor(seconds % 60); return `${mins}:${secs < 10 ? '0' : ''}${secs}`; }; const handleOpenUpload = () => { if (!currentMember) { onRequestSignIn(); } else { setIsUploadModalOpen(true); } }; return ( <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28"> {/* Hidden Audio Element */} <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onEnded={() => setIsPlaying(false)} onPause={() => setIsPlaying(false)} onPlay={() => setIsPlaying(true)} /> {/* Hero Header */} <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 text-white rounded-2xl p-6 sm:p-10 mb-8 border border-slate-800 shadow-lg relative overflow-hidden"> <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none"> <BookOpen className="w-80 h-80 text-amber-300" /> </div> <div className="relative z-10 max-w-3xl"> <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase tracking-wider mb-3"> <Sparkles className="w-3.5 h-3.5" /> <span>Digital Word & Ministerial Archive</span> </div> <h1 className="text-2xl sm:text-4xl font-bold font-serif tracking-tight text-white"> Sermon & Word Media Repository </h1> <p className="text-slate-300 text-sm sm:text-base mt-2.5 leading-relaxed"> Access powerful apostolic teachings, audio messages, video convocations, and downloadable PDF study notes for pastoral equipping and personal spiritual revival. </p> <div className="mt-6 flex flex-wrap items-center gap-3"> <button type="button" onClick={handleOpenUpload} className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-bold rounded-xl text-sm shadow-md shadow-amber-600/30 flex items-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer" > <Plus className="w-4 h-4" /> <span>Upload Sermon / Media</span> </button> <span className="text-xs text-slate-400"> {sermons.length} Messages in Library </span> </div> </div> </div> {/* Filter & Media Type Bar */} <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-xs mb-8 space-y-4"> {/* Media Type Tabs */} <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4"> <div className="flex items-center gap-2 overflow-x-auto text-xs sm:text-sm font-semibold"> <button type="button" onClick={() => setSelectedMediaType('all')} className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${ selectedMediaType === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }`} > <span>All Media</span> <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs">{sermons.length}</span> </button> <button type="button" onClick={() => setSelectedMediaType('audio')} className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${ selectedMediaType === 'audio' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }`} > <FileAudio className="w-4 h-4" /> <span>🎙️ Audio Messages</span> <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs"> {sermons.filter((s) => s.mediaType === 'audio').length} </span> </button> <button type="button" onClick={() => setSelectedMediaType('video')} className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${ selectedMediaType === 'video' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }`} > <Film className="w-4 h-4" /> <span>🎬 Video Sermons</span> <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs"> {sermons.filter((s) => s.mediaType === 'video').length} </span> </button> <button type="button" onClick={() => setSelectedMediaType('file')} className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${ selectedMediaType === 'file' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }`} > <FileText className="w-4 h-4" /> <span>📄 Study Notes & Files</span> <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs"> {sermons.filter((s) => s.mediaType === 'file').length} </span> </button> </div> {/* Quick upload trigger */} <button type="button" onClick={handleOpenUpload} className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl border border-amber-300 transition cursor-pointer" > <Plus className="w-3.5 h-3.5" /> <span>Upload New Message</span> </button> </div> {/* Search & Topic Filters */} <div className="flex flex-col md:flex-row gap-3 items-center justify-between"> <div className="relative w-full md:w-80"> <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by sermon title, preacher, scripture..." className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 transition" /> <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" /> </div> <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto"> <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium focus:ring-2 focus:ring-amber-500 w-full sm:w-auto" > {CATEGORIES.map((cat) => ( <option key={cat} value={cat}>{cat}</option> ))} </select> </div> </div> </div> {/* Sermons Grid */} {filteredSermons.length > 0 ? ( <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> {filteredSermons.map((sermon) => { const isCurrentlyPlayingThisAudio = currentPlayingAudio?.id === sermon.id && isPlaying; return ( <div key={sermon.id} className="bg-white border border-slate-200/80 hover:border-amber-400 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition duration-200 flex flex-col justify-between group" > <div> {/* Thumbnail / Header Area */} <div className="relative h-44 bg-slate-900 overflow-hidden"> <img src={sermon.coverImageUrl || 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=600&q=80'} alt={sermon.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition duration-300 opacity-85" /> <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" /> {/* Media Type Badge */} <div className="absolute top-3 left-3"> <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold text-white shadow-xs flex items-center gap-1 ${ sermon.mediaType === 'audio' ? 'bg-amber-600/90' : sermon.mediaType === 'video' ? 'bg-blue-600/90' : 'bg-emerald-600/90' }`}> {sermon.mediaType === 'audio' && <FileAudio className="w-3 h-3" />} {sermon.mediaType === 'video' && <Film className="w-3 h-3" />} {sermon.mediaType === 'file' && <FileText className="w-3 h-3" />} <span>{sermon.mediaType.toUpperCase()}</span> </span> </div> {/* Duration / Format Pill */} {sermon.duration && ( <div className="absolute top-3 right-3 bg-black/80 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1"> <Clock className="w-3 h-3" /> <span>{sermon.duration}</span> </div> )} {/* Interactive Play / Action Overlay */} <div className="absolute inset-0 flex items-center justify-center"> {sermon.mediaType === 'audio' && ( <button type="button" onClick={() => handlePlayAudio(sermon)} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition transform hover:scale-110 cursor-pointer ${ isCurrentlyPlayingThisAudio ? 'bg-amber-500 text-white ring-4 ring-amber-300/40 animate-pulse' : 'bg-white/90 hover:bg-white text-slate-900' }`} > {isCurrentlyPlayingThisAudio ? ( <Pause className="w-6 h-6 fill-current" /> ) : ( <Play className="w-6 h-6 fill-current ml-0.5 text-amber-700" /> )} </button> )} {sermon.mediaType === 'video' && ( <button type="button" onClick={() => { setActiveVideoSermon(sermon); incrementSermonPlays(sermon.id); }} className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xl transition transform hover:scale-110 cursor-pointer ring-4 ring-blue-400/30" > <Play className="w-6 h-6 fill-current ml-0.5" /> </button> )} {sermon.mediaType === 'file' && ( <button type="button" onClick={() => handleDownload(sermon)} className="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xl transition transform hover:scale-110 cursor-pointer ring-4 ring-emerald-400/30" > <Download className="w-6 h-6" /> </button> )} </div> {/* Category Label at bottom of image */} <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-slate-200"> <span className="font-semibold text-amber-300">{sermon.category}</span> <span>{sermon.date}</span> </div> </div> {/* Card Body */} <div className="p-5"> <h3 className="text-base sm:text-lg font-bold font-serif text-slate-900 group-hover:text-amber-700 transition line-clamp-2 mb-1.5"> {sermon.title} </h3> <div className="text-xs text-slate-600 space-y-1 mb-3"> <p className="font-semibold text-slate-800"> {sermon.speakerTitle ? `${sermon.speakerTitle} ` : ''}{sermon.speaker} </p> {sermon.churchName && ( <p className="text-slate-500 flex items-center gap-1"> <Church className="w-3 h-3 text-amber-600 shrink-0" /> <span className="truncate">{sermon.churchName}</span> </p> )} {sermon.scriptureRef && ( <p className="text-amber-800 italic font-serif text-[11px]"> 📖 {sermon.scriptureRef} </p> )} </div> <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3"> {sermon.description} </p> {/* Tags */} {sermon.tags && sermon.tags.length > 0 && ( <div className="flex flex-wrap gap-1 mb-2"> {sermon.tags.slice(0, 3).map((tag, idx) => ( <span key={idx} className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium"> #{tag} </span> ))} </div> )} </div> </div> {/* Card Action Footer */} <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 text-xs"> {sermon.mediaType === 'audio' ? ( <button type="button" onClick={() => handlePlayAudio(sermon)} className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold flex items-center gap-1.5 transition cursor-pointer" > {isCurrentlyPlayingThisAudio ? ( <> <Pause className="w-3.5 h-3.5" /> <span>Pause Audio</span> </> ) : ( <> <Play className="w-3.5 h-3.5" /> <span>Listen Audio</span> </> )} </button> ) : sermon.mediaType === 'video' ? ( <button type="button" onClick={() => { setActiveVideoSermon(sermon); incrementSermonPlays(sermon.id); }} className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold flex items-center gap-1.5 transition cursor-pointer" > <Film className="w-3.5 h-3.5" /> <span>Watch Video</span> </button> ) : ( <button type="button" onClick={() => handleDownload(sermon)} className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold flex items-center gap-1.5 transition cursor-pointer" > <Download className="w-3.5 h-3.5" /> <span>Download Outline</span> </button> )} {/* Additional file attachment download if available */} {sermon.fileUrl && sermon.mediaType !== 'file' && ( <button type="button" onClick={() => handleDownload(sermon, sermon.fileUrl)} className="text-[11px] font-semibold text-slate-600 hover:text-amber-800 flex items-center gap-1 cursor-pointer" title="Download Attached Study Notes PDF" > <FileText className="w-3 h-3 text-amber-600" /> <span>PDF Notes</span> </button> )} </div> </div> ); })} </div> ) : ( <div className="text-center py-16 bg-white border border-slate-200/80 rounded-2xl p-8"> <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" /> <h3 className="text-lg font-bold text-slate-800">No Sermons Found</h3> <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-5"> We couldn't find any sermon recordings or study files matching your search filters. </p> <button type="button" onClick={handleOpenUpload} className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl cursor-pointer" > Upload the First Sermon Here </button> </div> )} {/* STICKY BOTTOM AUDIO PLAYER BAR (When Audio is active) */} {currentPlayingAudio && ( <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-3 sm:p-4"> <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3"> {/* Playing Info */} <div className="flex items-center gap-3 w-full sm:w-1/3 min-w-0"> <img src={currentPlayingAudio.coverImageUrl || 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=100&q=80'} alt="" className="w-11 h-11 rounded-lg object-cover border border-slate-700 shrink-0" /> <div className="min-w-0"> <h4 className="text-xs sm:text-sm font-bold truncate text-white font-serif"> {currentPlayingAudio.title} </h4> <p className="text-[11px] text-amber-400 truncate"> {currentPlayingAudio.speaker} </p> </div> </div> {/* Playback Controls & Progress Slider */} <div className="flex-1 w-full sm:max-w-md flex flex-col items-center gap-1.5"> <div className="flex items-center gap-4"> <button type="button" onClick={() => { if (audioRef.current) audioRef.current.currentTime -= 15; }} className="text-xs text-slate-400 hover:text-white cursor-pointer" title="Rewind 15s" > -15s </button> <button type="button" onClick={() => { if (isPlaying) { audioRef.current?.pause(); setIsPlaying(false); } else { audioRef.current?.play(); setIsPlaying(true); } }} className="w-9 h-9 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shadow-md transition cursor-pointer" > {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />} </button> <button type="button" onClick={() => { if (audioRef.current) audioRef.current.currentTime += 15; }} className="text-xs text-slate-400 hover:text-white cursor-pointer" title="Forward 15s" > +15s </button> </div> {/* Progress Slider */} <div className="w-full flex items-center gap-2 text-[10px] text-slate-400"> <span>{formatTime(audioRef.current?.currentTime || 0)}</span> <input type="range" min="0" max="100" value={audioProgress || 0} onChange={handleSeek} className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500" /> <span>{formatTime(audioDuration)}</span> </div> </div> {/* Right Tools */} <div className="hidden sm:flex items-center gap-3 w-1/3 justify-end"> <button type="button" onClick={() => { if (audioRef.current) { audioRef.current.muted = !isMuted; setIsMuted(!isMuted); } }} className="text-slate-400 hover:text-white cursor-pointer" > {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />} </button> <button type="button" onClick={() => handleDownload(currentPlayingAudio)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer" > <Download className="w-3.5 h-3.5" /> <span>Save MP3</span> </button> <button type="button" onClick={() => { audioRef.current?.pause(); setCurrentPlayingAudio(null); setIsPlaying(false); }} className="text-slate-400 hover:text-white cursor-pointer ml-2" title="Close Player" > <X className="w-4 h-4" /> </button> </div> </div> </div> )} {/* VIDEO PLAYER MODAL */} {activeVideoSermon && ( <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 flex items-center justify-center p-3 sm:p-5"> <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden"> {/* Modal Header */} <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-white"> <div className="min-w-0 pr-4"> <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400"> {activeVideoSermon.category} </span> <h3 className="text-base sm:text-lg font-bold font-serif truncate"> {activeVideoSermon.title} </h3> <p className="text-xs text-slate-400"> Speaker: {activeVideoSermon.speaker} {activeVideoSermon.churchName ? `• ${activeVideoSermon.churchName}` : ''} </p> </div> <button type="button" onClick={() => setActiveVideoSermon(null)} className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center transition cursor-pointer shrink-0" > <X className="w-4 h-4" /> </button> </div> {/* Video Player Embed Container */} <div className="relative aspect-video bg-black"> {activeVideoSermon.mediaUrl.includes('youtube.com') || activeVideoSermon.mediaUrl.includes('youtu.be') ? ( <iframe src={activeVideoSermon.mediaUrl} title={activeVideoSermon.title} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> ) : ( <video src={activeVideoSermon.mediaUrl} controls autoPlay className="w-full h-full" /> )} </div> {/* Video Details and Outline Downloads */} <div className="p-4 sm:p-6 bg-slate-900 text-slate-300 space-y-3"> <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3"> <div className="text-xs text-slate-400"> Preached on <strong className="text-white">{activeVideoSermon.date}</strong> </div> {activeVideoSermon.fileUrl && ( <button type="button" onClick={() => handleDownload(activeVideoSermon, activeVideoSermon.fileUrl)} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer" > <Download className="w-3.5 h-3.5" /> <span>Download Accompanying PDF Study Notes</span> </button> )} </div> <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-serif"> {activeVideoSermon.description} </p> </div> </div> </div> )} {/* Upload Modal */} <SermonUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} onSuccess={onAddSermonSuccess} currentMember={currentMember} /> </div> );
+import { SermonUploadModal } from './SermonUploadModal';
+
+interface SermonsSectionProps {
+  sermons: SermonMedia[];
+  onAddSermonSuccess: (newSermon: SermonMedia) => void;
+  currentMember: MemberUser | null;
+  onRequestSignIn: () => void;
+  isAdmin?: boolean;
+  onNavigateToAdmin?: () => void;
+}
+
+const CATEGORIES = [
+  'All Categories',
+  'Apostolic Leadership',
+  'Spiritual Growth & Discipleship',
+  'Church Governance & Administration',
+  'Prayer & Spiritual Warfare',
+  'Pastoral Care & Wellness',
+  'Youth & NextGen Ministry',
+  'Syllabus & Study Outlines',
+];
+
+export const SermonsSection: React.FC<SermonsSectionProps> = ({
+  sermons,
+  onAddSermonSuccess,
+  currentMember,
+  onRequestSignIn,
+  isAdmin = false,
+  onNavigateToAdmin,
+}) => {
+  const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [showAdminNotice, setShowAdminNotice] = useState(false);
+
+  // Audio Player State
+  const [currentPlayingAudio, setCurrentPlayingAudio] = useState<SermonMedia | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Video Modal State
+  const [activeVideoSermon, setActiveVideoSermon] = useState<SermonMedia | null>(null);
+
+  const filteredSermons = sermons.filter((sermon) => {
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !query ||
+      sermon.title.toLowerCase().includes(query) ||
+      sermon.speaker.toLowerCase().includes(query) ||
+      (sermon.churchName && sermon.churchName.toLowerCase().includes(query)) ||
+      (sermon.scriptureRef && sermon.scriptureRef.toLowerCase().includes(query)) ||
+      (sermon.description && sermon.description.toLowerCase().includes(query));
+
+    const matchesType = selectedMediaType === 'all' || sermon.mediaType === selectedMediaType;
+    const matchesCategory =
+      selectedCategory === 'All Categories' || sermon.category === selectedCategory;
+
+    return matchesSearch && matchesType && matchesCategory;
+  });
+
+  const handlePlayAudio = (sermon: SermonMedia) => {
+    if (currentPlayingAudio?.id === sermon.id) {
+      if (isPlaying) {
+        audioRef.current?.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current?.play();
+        setIsPlaying(true);
+      }
+    } else {
+      setCurrentPlayingAudio(sermon);
+      setIsPlaying(true);
+      incrementSermonPlays(sermon.id);
+      if (audioRef.current) {
+        audioRef.current.src = sermon.mediaUrl;
+        audioRef.current.play().catch((e) => console.log('Audio playback error', e));
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const current = audioRef.current.currentTime;
+      const total = audioRef.current.duration || 1;
+      setAudioProgress((current / total) * 100);
+      setAudioDuration(audioRef.current.duration || 0);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (audioRef.current && audioRef.current.duration) {
+      const newTime = (parseFloat(e.target.value) / 100) * audioRef.current.duration;
+      audioRef.current.currentTime = newTime;
+      setAudioProgress(parseFloat(e.target.value));
+    }
+  };
+
+  const handleDownload = (sermon: SermonMedia, urlToDownload?: string) => {
+    incrementSermonDownloads(sermon.id);
+    const targetUrl = urlToDownload || sermon.fileUrl || sermon.mediaUrl;
+    if (targetUrl) {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.download =
+        sermon.fileName ||
+        `${sermon.title.replace(/\s+/g, '_')}.${
+          sermon.mediaType === 'audio' ? 'mp3' : sermon.mediaType === 'file' ? 'pdf' : 'mp4'
+        }`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleOpenUpload = () => {
+    if (!isAdmin) {
+      setShowAdminNotice(true);
+      return;
+    }
+    setIsUploadModalOpen(true);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
+      {/* Hidden Audio Element */}
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={() => setIsPlaying(false)}
+        onPause={() => setIsPlaying(false)}
+        onPlay={() => setIsPlaying(true)}
+      />
+
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 text-white rounded-2xl p-6 sm:p-10 mb-8 border border-slate-800 shadow-lg relative overflow-hidden">
+        <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
+          <BookOpen className="w-80 h-80 text-amber-300" />
+        </div>
+
+        <div className="relative z-10 max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase tracking-wider mb-3">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Digital Word & Ministerial Archive</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-bold font-serif tracking-tight text-white">
+            Sermon & Word Media Repository
+          </h1>
+          <p className="text-slate-300 text-sm sm:text-base mt-2.5 leading-relaxed">
+            Access apostolic teachings, audio messages, video recordings, and downloadable PDF study notes for pastoral equipping and personal spiritual revival.
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={handleOpenUpload}
+                className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-bold rounded-xl text-sm shadow-md shadow-amber-600/30 flex items-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Upload Sermon / Media</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleOpenUpload}
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold rounded-xl text-xs flex items-center gap-2 transition cursor-pointer"
+                title="Only Master Administrator can upload sermons"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Admin Upload Portal</span>
+              </button>
+            )}
+            <span className="text-xs text-slate-400">
+              {sermons.length} Messages in Library
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter & Media Type Bar */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-xs mb-8 space-y-4">
+        {/* Media Type Tabs */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-2 overflow-x-auto text-xs sm:text-sm font-semibold">
+            <button
+              type="button"
+              onClick={() => setSelectedMediaType('all')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                selectedMediaType === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <span>All Media</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs">
+                {sermons.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedMediaType('audio')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                selectedMediaType === 'audio'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <FileAudio className="w-4 h-4" />
+              <span>Audio Messages</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs">
+                {sermons.filter((s) => s.mediaType === 'audio').length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedMediaType('video')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                selectedMediaType === 'video'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Film className="w-4 h-4" />
+              <span>Video Sermons</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs">
+                {sermons.filter((s) => s.mediaType === 'video').length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedMediaType('file')}
+              className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                selectedMediaType === 'file'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Study Notes & Outlines</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-xs">
+                {sermons.filter((s) => s.mediaType === 'file').length}
+              </span>
+            </button>
+          </div>
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleOpenUpload}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl border border-amber-300 transition cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Upload New Message</span>
+            </button>
+          )}
+        </div>
+
+        {/* Search & Topic Filters */}
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by sermon title, preacher, scripture..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 transition"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium focus:ring-2 focus:ring-amber-500 w-full sm:w-auto"
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Sermons Grid */}
+      {filteredSermons.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredSermons.map((sermon) => {
+            const isCurrentlyPlayingThisAudio = currentPlayingAudio?.id === sermon.id && isPlaying;
+            return (
+              <div
+                key={sermon.id}
+                className="bg-white border border-slate-200/80 hover:border-amber-400 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition duration-200 flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Thumbnail / Header Area */}
+                  <div className="relative h-44 bg-slate-900 overflow-hidden">
+                    <img
+                      src={
+                        sermon.coverImageUrl ||
+                        'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=600&q=80'
+                      }
+                      alt={sermon.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300 opacity-85"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+
+                    {/* Media Type Badge */}
+                    <div className="absolute top-3 left-3">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold text-white shadow-xs flex items-center gap-1 ${
+                          sermon.mediaType === 'audio'
+                            ? 'bg-amber-600/90'
+                            : sermon.mediaType === 'video'
+                            ? 'bg-blue-600/90'
+                            : 'bg-emerald-600/90'
+                        }`}
+                      >
+                        {sermon.mediaType === 'audio' && <FileAudio className="w-3 h-3" />}
+                        {sermon.mediaType === 'video' && <Film className="w-3 h-3" />}
+                        {sermon.mediaType === 'file' && <FileText className="w-3 h-3" />}
+                        <span>{sermon.mediaType.toUpperCase()}</span>
+                      </span>
+                    </div>
+
+                    {/* Duration / Format Pill */}
+                    {sermon.duration && (
+                      <div className="absolute top-3 right-3 bg-black/80 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{sermon.duration}</span>
+                      </div>
+                    )}
+
+                    {/* Interactive Play / Action Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {sermon.mediaType === 'audio' && (
+                        <button
+                          type="button"
+                          onClick={() => handlePlayAudio(sermon)}
+                          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition transform hover:scale-110 cursor-pointer ${
+                            isCurrentlyPlayingThisAudio
+                              ? 'bg-amber-500 text-white ring-4 ring-amber-300/40 animate-pulse'
+                              : 'bg-white/90 hover:bg-white text-slate-900'
+                          }`}
+                        >
+                          {isCurrentlyPlayingThisAudio ? (
+                            <Pause className="w-6 h-6 fill-current" />
+                          ) : (
+                            <Play className="w-6 h-6 fill-current ml-0.5 text-amber-700" />
+                          )}
+                        </button>
+                      )}
+                      {sermon.mediaType === 'video' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveVideoSermon(sermon);
+                            incrementSermonPlays(sermon.id);
+                          }}
+                          className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xl transition transform hover:scale-110 cursor-pointer ring-4 ring-blue-400/30"
+                        >
+                          <Play className="w-6 h-6 fill-current ml-0.5" />
+                        </button>
+                      )}
+                      {sermon.mediaType === 'file' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDownload(sermon)}
+                          className="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xl transition transform hover:scale-110 cursor-pointer ring-4 ring-emerald-400/30"
+                        >
+                          <Download className="w-6 h-6" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Category Label at bottom of image */}
+                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-slate-200">
+                      <span className="font-semibold text-amber-300">{sermon.category}</span>
+                      <span>{sermon.date}</span>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-5">
+                    <h3 className="text-base sm:text-lg font-bold font-serif text-slate-900 group-hover:text-amber-700 transition line-clamp-2 mb-1.5">
+                      {sermon.title}
+                    </h3>
+                    <div className="text-xs text-slate-600 space-y-1 mb-3">
+                      <p className="font-semibold text-slate-800">
+                        {sermon.speakerTitle ? `${sermon.speakerTitle} ` : ''}
+                        {sermon.speaker}
+                      </p>
+                      {sermon.churchName && (
+                        <p className="text-slate-500 flex items-center gap-1">
+                          <Church className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span className="truncate">{sermon.churchName}</span>
+                        </p>
+                      )}
+                      {sermon.scriptureRef && (
+                        <p className="text-amber-800 italic font-serif text-[11px]">
+                          📖 {sermon.scriptureRef}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">
+                      {sermon.description}
+                    </p>
+                    {/* Tags */}
+                    {sermon.tags && sermon.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {sermon.tags.slice(0, 3).map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Action Footer */}
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                  {sermon.mediaType === 'audio' ? (
+                    <button
+                      type="button"
+                      onClick={() => handlePlayAudio(sermon)}
+                      className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      {isCurrentlyPlayingThisAudio ? (
+                        <>
+                          <Pause className="w-3.5 h-3.5" />
+                          <span>Pause Audio</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5" />
+                          <span>Listen Audio</span>
+                        </>
+                      )}
+                    </button>
+                  ) : sermon.mediaType === 'video' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveVideoSermon(sermon);
+                        incrementSermonPlays(sermon.id);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Film className="w-3.5 h-3.5" />
+                      <span>Watch Video</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(sermon)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download Outline</span>
+                    </button>
+                  )}
+
+                  {/* Additional file attachment download if available */}
+                  {sermon.fileUrl && sermon.mediaType !== 'file' && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(sermon, sermon.fileUrl)}
+                      className="text-[11px] font-semibold text-slate-600 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
+                      title="Download Attached Study Notes PDF"
+                    >
+                      <FileText className="w-3 h-3 text-amber-600" />
+                      <span>PDF Notes</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-16 bg-white border border-slate-200/80 rounded-2xl p-8">
+          <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-slate-800">No Sermons Found</h3>
+          <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-5">
+            We couldn't find any sermon recordings or study files matching your search filters.
+          </p>
+        </div>
+      )}
+
+      {/* Admin Notice Dialog */}
+      {showAdminNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto border border-amber-200 shadow-inner">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold font-serif text-slate-900">
+                Sole Administrator Access Required
+              </h3>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                Uploading new sermon recordings, audio files, and modifying media catalogs is strictly restricted to the authorized Master Administrator (<strong className="font-mono text-slate-900">asamuelbukunmi@gmail.com</strong>).
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col gap-2">
+              {onNavigateToAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminNotice(false);
+                    onNavigateToAdmin();
+                  }}
+                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Go to Admin Portal Sign In</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAdminNotice(false)}
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STICKY BOTTOM AUDIO PLAYER BAR */}
+      {currentPlayingAudio && (
+        <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-3 sm:p-4">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Playing Info */}
+            <div className="flex items-center gap-3 w-full sm:w-1/3 min-w-0">
+              <img
+                src={
+                  currentPlayingAudio.coverImageUrl ||
+                  'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=100&q=80'
+                }
+                alt=""
+                className="w-11 h-11 rounded-lg object-cover border border-slate-700 shrink-0"
+              />
+              <div className="min-w-0">
+                <h4 className="text-xs sm:text-sm font-bold truncate text-white font-serif">
+                  {currentPlayingAudio.title}
+                </h4>
+                <p className="text-[11px] text-amber-400 truncate">
+                  {currentPlayingAudio.speaker}
+                </p>
+              </div>
+            </div>
+
+            {/* Playback Controls & Progress Slider */}
+            <div className="flex-1 w-full sm:max-w-md flex flex-col items-center gap-1.5">
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (audioRef.current) audioRef.current.currentTime -= 15;
+                  }}
+                  className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                  title="Rewind 15s"
+                >
+                  -15s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isPlaying) {
+                      audioRef.current?.pause();
+                      setIsPlaying(false);
+                    } else {
+                      audioRef.current?.play();
+                      setIsPlaying(true);
+                    }
+                  }}
+                  className="w-9 h-9 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shadow-md transition cursor-pointer"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-4 h-4 fill-current" />
+                  ) : (
+                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (audioRef.current) audioRef.current.currentTime += 15;
+                  }}
+                  className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                  title="Forward 15s"
+                >
+                  +15s
+                </button>
+              </div>
+
+              {/* Progress Slider */}
+              <div className="w-full flex items-center gap-2 text-[10px] text-slate-400">
+                <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={audioProgress || 0}
+                  onChange={handleSeek}
+                  className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+                <span>{formatTime(audioDuration)}</span>
+              </div>
+            </div>
+
+            {/* Right Tools */}
+            <div className="hidden sm:flex items-center gap-3 w-1/3 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (audioRef.current) {
+                    audioRef.current.muted = !isMuted;
+                    setIsMuted(!isMuted);
+                  }
+                }}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownload(currentPlayingAudio)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Save MP3</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  audioRef.current?.pause();
+                  setCurrentPlayingAudio(null);
+                  setIsPlaying(false);
+                }}
+                className="text-slate-400 hover:text-white cursor-pointer ml-2"
+                title="Close Player"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIDEO PLAYER MODAL */}
+      {activeVideoSermon && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-white">
+              <div className="min-w-0 pr-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                  {activeVideoSermon.category}
+                </span>
+                <h3 className="text-base sm:text-lg font-bold font-serif truncate">
+                  {activeVideoSermon.title}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Speaker: {activeVideoSermon.speaker}{' '}
+                  {activeVideoSermon.churchName ? `• ${activeVideoSermon.churchName}` : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveVideoSermon(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center transition cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Video Player Embed Container */}
+            <div className="relative aspect-video bg-black">
+              {activeVideoSermon.mediaUrl.includes('youtube.com') ||
+              activeVideoSermon.mediaUrl.includes('youtu.be') ? (
+                <iframe
+                  src={activeVideoSermon.mediaUrl}
+                  title={activeVideoSermon.title}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video src={activeVideoSermon.mediaUrl} controls autoPlay className="w-full h-full" />
+              )}
+            </div>
+
+            {/* Video Details and Outline Downloads */}
+            <div className="p-4 sm:p-6 bg-slate-900 text-slate-300 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div className="text-xs text-slate-400">
+                  Preached on <strong className="text-white">{activeVideoSermon.date}</strong>
+                </div>
+                {activeVideoSermon.fileUrl && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(activeVideoSermon, activeVideoSermon.fileUrl)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Accompanying PDF Study Notes</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-serif">
+                {activeVideoSermon.description}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Modal (Only opened by Admin) */}
+      <SermonUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={onAddSermonSuccess}
+        currentMember={currentMember}
+      />
+    </div>
+  );
 };

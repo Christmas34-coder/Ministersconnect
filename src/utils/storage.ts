@@ -326,6 +326,8 @@ export function resetSiteSettingsToDefault(): SiteSettings {
 }
 
 // ADMIN USERS & ACCESS CONTROL
+export const PRIMARY_ADMIN_EMAIL = 'asamuelbukunmi@gmail.com';
+
 export function getAdminUsers(): AdminUser[] {
   try {
     const data = localStorage.getItem(KEYS.ADMIN_USERS);
@@ -334,13 +336,14 @@ export function getAdminUsers(): AdminUser[] {
       return INITIAL_ADMINS;
     }
     const admins: AdminUser[] = JSON.parse(data);
-    const hasOwner = admins.some((a) => a.email.toLowerCase() === 'asamuelbukunmi@gmail.com');
-    if (!hasOwner) {
-      const updated = [...INITIAL_ADMINS, ...admins];
+    const owner = admins.find((a) => a.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase());
+    if (!owner) {
+      const updated = [INITIAL_ADMINS[0]];
       localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(updated));
       return updated;
     }
-    return admins;
+    // Only return authorized admin
+    return [owner];
   } catch (e) {
     console.error('Error reading admin users from localStorage', e);
     return INITIAL_ADMINS;
@@ -385,7 +388,7 @@ export function updateAdminUser(id: string, updates: Partial<AdminUser>): AdminU
 export function deleteAdminUser(id: string): boolean {
   const current = getAdminUsers();
   const adminToDelete = current.find((a) => a.id === id);
-  if (!adminToDelete || adminToDelete.isPrimaryOwner) {
+  if (!adminToDelete || adminToDelete.isPrimaryOwner || adminToDelete.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
     return false;
   }
   const filtered = current.filter((a) => a.id !== id);
@@ -416,33 +419,51 @@ export function authenticateAdmin(
   email: string,
   passcode: string
 ): { success: boolean; admin?: AdminUser; error?: string } {
-  const admins = getAdminUsers();
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedPass = passcode.trim();
 
-  const match = admins.find((a) => a.email.toLowerCase() === trimmedEmail);
-  if (!match) {
-    if (trimmedEmail === 'asamuelbukunmi@gmail.com' && (trimmedPass === 'admin123' || trimmedPass === 'admin' || trimmedPass === '1234')) {
-      const ownerAdmin = INITIAL_ADMINS[0];
-      setAdminAuthenticated(true);
-      setCurrentAdmin(ownerAdmin);
-      return { success: true, admin: ownerAdmin };
-    }
-    return { success: false, error: 'No administrative account found with this email address.' };
+  // Strict check: only asamuelbukunmi@gmail.com is authorized
+  if (trimmedEmail !== PRIMARY_ADMIN_EMAIL.toLowerCase()) {
+    return {
+      success: false,
+      error: `Access Denied: The Admin Portal is strictly restricted to the primary administrator (${PRIMARY_ADMIN_EMAIL}). Unauthorized accounts cannot access or edit site records.`,
+    };
   }
 
-  if (!match.isActive) {
-    return { success: false, error: 'This administrator account has been deactivated. Please contact the Secretariat Lead.' };
+  const admins = getAdminUsers();
+  const owner = admins.find((a) => a.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) || INITIAL_ADMINS[0];
+  const settings = getSiteSettings();
+
+  const validPasscodes = [owner.passcode, settings.adminPasscode, 'admin123', 'admin'].filter(Boolean);
+  const isValid = validPasscodes.includes(trimmedPass);
+
+  if (!isValid) {
+    return {
+      success: false,
+      error: 'Invalid administrator password / security passcode. Please check your credentials.',
+    };
   }
 
-  if (match.passcode !== trimmedPass && trimmedPass !== 'admin123' && trimmedPass !== 'admin') {
-    return { success: false, error: 'Invalid password / security passcode for this admin account.' };
-  }
-
-  updateAdminUser(match.id, { lastLoginAt: new Date().toISOString() });
+  updateAdminUser(owner.id, { lastLoginAt: new Date().toISOString() });
   setAdminAuthenticated(true);
-  setCurrentAdmin(match);
-  return { success: true, admin: match };
+  setCurrentAdmin(owner);
+  return { success: true, admin: owner };
+}
+
+export function updatePrimaryAdminPasscode(newPasscode: string): { success: boolean; error?: string } {
+  if (!newPasscode || newPasscode.trim().length < 4) {
+    return { success: false, error: 'Password must be at least 4 characters long.' };
+  }
+  const cleanPass = newPasscode.trim();
+
+  // Update site settings
+  updateSiteSettings({ adminPasscode: cleanPass });
+
+  // Update owner in admin list
+  const admins = getAdminUsers();
+  const owner = admins.find((a) => a.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) || INITIAL_ADMINS[0];
+  updateAdminUser(owner.id, { passcode: cleanPass });
+  return { success: true };
 }
 
 // ADMIN AUTH

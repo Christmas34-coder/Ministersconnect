@@ -1236,7 +1236,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">
-                      Programme Selection & Convocation Schedule
+                      Programme Selection & August Schedule
                     </h2>
                     <p className="text-xs text-slate-500">
                       Select which programme you are registering for and confirm arrival dates.
@@ -1247,7 +1247,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Select Convocation Programme <span className="text-red-500">*</span>
+                      Select August Programme <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={programmeId}

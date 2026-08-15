@@ -24,6 +24,7 @@ import {
   addChurchLeader,
   getSermons,
   addSermon,
+  isAdminAuthenticated,
 } from './utils/storage';
 import { initFirebaseSync, subscribeToDataChanges } from './services/firebaseSync';
 import { Navbar, AppTab } from './components/Navbar';
@@ -313,13 +314,18 @@ export function App() {
                 onRequestSignIn={() =>
                   handleOpenMemberAuth('signin', 'Please sign in with your member account to access study notes.')
                 }
+                isAdmin={isAdminAuthenticated()}
+                onNavigateToAdmin={() => {
+                  setActiveTab('admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               />
             )}
 
             {activeTab === 'gallery' && (
               <GallerySection
                 gallery={gallery}
-                isAdmin={true}
+                isAdmin={isAdminAuthenticated()}
                 onEditItem={handleOpenGalleryModal}
               />
             )}
