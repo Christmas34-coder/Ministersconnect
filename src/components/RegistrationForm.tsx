@@ -32,6 +32,13 @@ import {
   Check,
   Award,
   ArrowRight,
+  Download,
+  Printer,
+  Share2,
+  UserPlus,
+  Eye,
+  EyeOff,
+  BadgePercent,
 } from 'lucide-react';
 import {
   Programme,
@@ -40,9 +47,18 @@ import {
   MinisterialPosition,
   MemberUser,
 } from '../types';
-import { addRegistration, findRegistrationByIdOrEmail, getRegistrations } from '../utils/storage';
+import {
+  addRegistration,
+  findRegistrationByIdOrEmail,
+  getRegistrations,
+  registerMember,
+  authenticateMember,
+  getMembers,
+} from '../utils/storage';
 import { PassportPhotoSelector } from './PassportPhotoSelector';
 import { INITIAL_PROGRAMMES } from '../data/seedData';
+import { exportElementToPDF, printConfirmationLetter } from '../utils/pdfGenerator';
+import { MinisterBadgeModal } from './MinisterBadgeModal';
 
 interface RegistrationFormProps {
   programmes: Programme[];
@@ -52,6 +68,7 @@ interface RegistrationFormProps {
   currentMember?: MemberUser | null;
   onRequestSignIn?: () => void;
   onViewExistingRegistration?: (registration: Registration) => void;
+  onMemberAuthSuccess?: (member: MemberUser) => void;
 }
 
 const MINISTERIAL_TITLES: MinisterialTitle[] = [
@@ -96,6 +113,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   currentMember,
   onRequestSignIn,
   onViewExistingRegistration,
+  onMemberAuthSuccess,
 }) => {
   // Ensure we have active programmes, fallback to initial programmes if empty
   const availableProgrammes =
@@ -108,7 +126,26 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   // Active Sub-Tab in the Register Portal
   const [portalMode, setPortalMode] = useState<'form' | 'lookup' | 'programmes' | 'guidelines'>('form');
 
-  // Form Field States
+  // Inline Auth Gate Mode (When !currentMember)
+  const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+
+  // Inline Sign Up Fields
+  const [authTitle, setAuthTitle] = useState<MinisterialTitle>('Pastor');
+  const [authFullName, setAuthFullName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authChurch, setAuthChurch] = useState('');
+  const [authPosition, setAuthPosition] = useState<MinisterialPosition>('Senior Pastor / General Overseer');
+  const [authCity, setAuthCity] = useState('Abuja');
+  const [authState, setAuthState] = useState('FCT');
+  const [authCountry, setAuthCountry] = useState('Nigeria');
+  const [authPhoto, setAuthPhoto] = useState('');
+  const [showAuthPassword, setShowAuthPassword] = useState(false);
+
+  // Form Field States (Populated when logged in)
   const [title, setTitle] = useState<MinisterialTitle>(currentMember?.title || 'Pastor');
   const [fullName, setFullName] = useState(currentMember?.fullName || '');
   const [email, setEmail] = useState(currentMember?.email || '');
@@ -143,6 +180,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [lookupQuery, setLookupQuery] = useState('');
   const [lookupResults, setLookupResults] = useState<Registration[]>([]);
   const [hasSearchedLookup, setHasSearchedLookup] = useState(false);
+
+  // Post-Registration Success Dialog State
+  const [createdRegistration, setCreatedRegistration] = useState<Registration | null>(null);
+  const [badgeModalRegistration, setBadgeModalRegistration] = useState<Registration | null>(null);
 
   // Sync if currentMember updates
   useEffect(() => {
@@ -206,6 +247,100 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }
   };
 
+  // Inline Sign-Up Handler
+  const handleInlineSignUp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    if (!authFullName.trim()) {
+      setAuthError('Please enter your Full Name (e.g. Pastor Samuel Adeleke).');
+      return;
+    }
+    if (!authEmail.trim() || !/\S+@\S+\.\S+/.test(authEmail)) {
+      setAuthError('Please enter a valid Email address.');
+      return;
+    }
+    if (!authPassword || authPassword.length < 6) {
+      setAuthError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (!authPhone.trim()) {
+      setAuthError('Please enter your Phone or WhatsApp number.');
+      return;
+    }
+    if (!authChurch.trim()) {
+      setAuthError('Please enter your Church or Ministry name.');
+      return;
+    }
+    if (!authCity.trim()) {
+      setAuthError('Please enter your City / Location.');
+      return;
+    }
+
+    setAuthLoading(true);
+    setTimeout(() => {
+      const res = registerMember({
+        email: authEmail.trim().toLowerCase(),
+        password: authPassword,
+        title: authTitle,
+        fullName: authFullName.trim(),
+        phone: authPhone.trim(),
+        whatsapp: authPhone.trim(),
+        churchName: authChurch.trim(),
+        ministerialPosition: authPosition,
+        city: authCity.trim(),
+        state: authState.trim() || undefined,
+        country: authCountry.trim(),
+        avatarUrl: authPhoto || undefined,
+      });
+
+      setAuthLoading(false);
+
+      if (res.success && res.member) {
+        if (onMemberAuthSuccess) {
+          onMemberAuthSuccess(res.member);
+        }
+      } else {
+        setAuthError(res.error || 'Registration failed. An account with this email may already exist.');
+      }
+    }, 350);
+  };
+
+  // Inline Sign-In Handler
+  const handleInlineSignIn = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    if (!authEmail.trim()) {
+      setAuthError('Please enter your member email address.');
+      return;
+    }
+    if (!authPassword) {
+      setAuthError('Please enter your password.');
+      return;
+    }
+
+    setAuthLoading(true);
+    setTimeout(() => {
+      const res = authenticateMember(authEmail, authPassword);
+      setAuthLoading(false);
+
+      if (res.success && res.member) {
+        if (onMemberAuthSuccess) {
+          onMemberAuthSuccess(res.member);
+        }
+      } else {
+        setAuthError(res.error || 'Authentication failed. Please check your email and password.');
+      }
+    }, 350);
+  };
+
+  const handleQuickDemoLogin = (emailSample: string) => {
+    setAuthEmail(emailSample);
+    setAuthPassword('password123');
+    setAuthError(null);
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!fullName.trim()) newErrors.fullName = 'Full name is required for official credentialing';
@@ -223,6 +358,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentMember) {
+      setAuthError('Please create an account or sign in with your password before submitting.');
+      window.scrollTo({ top: 100, behavior: 'smooth' });
+      return;
+    }
+
     if (!validate()) {
       window.scrollTo({ top: 200, behavior: 'smooth' });
       return;
@@ -268,18 +410,19 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       // Confetti celebration
       try {
         confetti({
-          particleCount: 90,
-          spread: 75,
-          origin: { y: 0.6 },
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.55 },
           colors: ['#d97706', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'],
         });
       } catch (err) {
-        // Safe fallback if canvas-confetti is not loaded
+        // Safe fallback
       }
 
       setSubmitting(false);
+      setCreatedRegistration(newRegistration);
       onRegistrationSuccess(newRegistration);
-    }, 450);
+    }, 400);
   };
 
   const handleLookupSubmit = (e: React.FormEvent) => {
@@ -298,6 +441,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           r.phone === currentMember.phone
       )
     : [];
+
+  const sampleMembers = getMembers().slice(0, 3);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -321,15 +466,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black font-serif tracking-tight text-white leading-tight">
-            Ministers Connect Accreditation & Registration Portal
+            Ministers Accreditation & Programme Registration
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base mt-2.5 max-w-3xl leading-relaxed">
-            Welcome to the official accreditation desk for Christian ministers, apostles, pastors,
-            evangelists, and church leaders. Register to receive your official{' '}
-            <strong className="text-amber-300">Confirmation Letter</strong>, personalized{' '}
-            <strong className="text-amber-300">Digital Gate Pass with QR Code</strong>, and access to all
-            plenary sessions and Fruit Fasting hospitality.
+            Welcome to the official accreditation desk. Sign up with your password to complete your
+            programme registration, generate your <strong className="text-amber-300">Official Confirmation Letter (PDF)</strong>,
+            and download your personalized <strong className="text-amber-300">Digital Gate Pass & Accreditation Badge</strong>.
           </p>
 
           {/* Quick Hotline Summary Bar */}
@@ -340,7 +483,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               </span>
               <span className="text-slate-400">•</span>
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-amber-400" /> Maitama, Abuja
+                <MapPin className="w-4 h-4 text-amber-400" /> Maitama, Abuja FCT
               </span>
             </div>
 
@@ -380,7 +523,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           }`}
         >
           <UserCheck className="w-4 h-4 text-amber-400" />
-          <span>New Accreditation Form</span>
+          <span>Accreditation Form</span>
         </button>
 
         <button
@@ -424,655 +567,932 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. MEMBER AUTH STATUS CARD */}
-      {/* ========================================================================= */}
-      {!currentMember ? (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-amber-500/10 border-2 border-amber-500/30 rounded-2xl p-5 sm:p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-              <Lock className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>Member Account Authentication</span>
-                <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-200 text-amber-950 uppercase tracking-wide">
-                  Optional Fast-Pass
-                </span>
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 mt-0.5 leading-relaxed">
-                Sign in to pre-fill your ministerial credentials automatically, view previous
-                registrations, and print saved credentials. Or proceed below as a new delegate.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onRequestSignIn}
-            className="w-full sm:w-auto shrink-0 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition cursor-pointer"
-          >
-            <LogIn className="w-4 h-4 text-amber-400" />
-            <span>Sign In with Password</span>
-          </button>
-        </div>
-      ) : (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            {currentMember.avatarUrl ? (
-              <img
-                src={currentMember.avatarUrl}
-                alt=""
-                className="w-11 h-11 rounded-xl object-cover border-2 border-emerald-500 shadow-xs"
-              />
-            ) : (
-              <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
-                {currentMember.fullName.charAt(0)}
-              </div>
-            )}
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-emerald-950">
-                  Signed in as {currentMember.title} {currentMember.fullName}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold">
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified Minister
-                </span>
-              </div>
-              <p className="text-xs text-emerald-700">
-                {currentMember.churchName} • {currentMember.email}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-3 py-1.5 rounded-lg border border-emerald-200">
-              ✓ Credentials Auto-Loaded
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Member's Existing Registrations Fast Access (if any) */}
-      {currentMember && memberRegistrations.length > 0 && portalMode === 'form' && (
-        <div className="bg-white border border-amber-200 rounded-2xl p-4 sm:p-5 mb-8 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-600" />
-              <span>Your Active Accreditations ({memberRegistrations.length})</span>
-            </h3>
-            <span className="text-xs text-slate-500">Click any registration to view letter</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {memberRegistrations.map((reg) => (
-              <div
-                key={reg.id}
-                onClick={() => {
-                  if (onViewExistingRegistration) {
-                    onViewExistingRegistration(reg);
-                  } else {
-                    onRegistrationSuccess(reg);
-                  }
-                }}
-                className="p-3 bg-slate-50 hover:bg-amber-50/60 border border-slate-200 hover:border-amber-400 rounded-xl transition cursor-pointer flex items-center justify-between"
-              >
-                <div>
-                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
-                    {reg.id}
-                  </span>
-                  <p className="text-xs font-bold text-slate-800 mt-1 truncate max-w-[220px]">
-                    {reg.programmeTitle}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    {reg.attendeesCount} Delegate(s) • Arrival: {reg.arrivalDate}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 text-xs font-bold text-amber-700">
-                  <span>View Pass</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODE 1: NEW ACCREDITATION FORM */}
+      {/* MODE 1: REGISTRATION & ACCREDITATION FLOW */}
       {/* ========================================================================= */}
       {portalMode === 'form' && (
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* SECTION 1: Programme Selection */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                1
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Select Programme to Attend</h2>
-                <p className="text-xs text-slate-500">
-                  Choose the upcoming monthly programme or leadership summit
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Target Programme <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={programmeId}
-                  onChange={(e) => setProgrammeId(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition cursor-pointer text-sm"
-                >
-                  {displayProgrammes.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title} ({p.startDate} - {p.city}) {p.isFree ? '• [Free Registration]' : ''}
-                    </option>
-                  ))}
-                </select>
-                {errors.programmeId && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.programmeId}
-                  </p>
-                )}
-              </div>
-
-              {/* Selected Programme Summary Card */}
-              {selectedProgramme && (
-                <div className="bg-gradient-to-br from-amber-50/80 to-amber-100/40 border border-amber-200/80 rounded-xl p-4 sm:p-5 text-xs sm:text-sm text-slate-700 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-bold text-amber-950 font-serif text-sm sm:text-base">
-                      {selectedProgramme.title}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-bold text-xs uppercase tracking-wide">
-                      {selectedProgramme.category}
-                    </span>
+        <div className="space-y-8">
+          {/* STEP 1: MANDATORY MEMBER SIGN-UP / SIGN-IN GATE */}
+          {!currentMember ? (
+            <div className="bg-white border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+              <div className="max-w-2xl mx-auto space-y-6">
+                {/* Gate Header */}
+                <div className="text-center space-y-2 pb-4 border-b border-slate-100">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold uppercase tracking-wider">
+                    <Lock className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Mandatory Presbytery Requirement</span>
                   </div>
-
-                  <p className="text-slate-800 italic font-serif text-sm leading-snug">
-                    Theme: "{selectedProgramme.theme}"
+                  <h2 className="text-xl sm:text-2xl font-bold font-serif text-slate-900">
+                    Step 1: Sign Up or Sign In with Your Password
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-xl mx-auto">
+                    All delegates and ministers <strong>must create an account with their own password</strong> before
+                    filling any registration form. Your account secures your official accreditation badge and
+                    confirmation letter.
                   </p>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-slate-700 pt-2 border-t border-amber-200/60">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
-                      <div>
-                        <span className="text-[11px] text-slate-500 block">Dates</span>
-                        <span className="font-semibold text-xs text-slate-900">
-                          {selectedProgramme.startDate} to {selectedProgramme.endDate}
-                        </span>
+                {/* Tab Switcher: Sign Up vs Sign In */}
+                <div className="grid grid-cols-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('signup');
+                      setAuthError(null);
+                    }}
+                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                      authMode === 'signup'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/80'
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Create Member Account (Sign Up)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('signin');
+                      setAuthError(null);
+                    }}
+                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                      authMode === 'signin'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/80'
+                    }`}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Member Sign In</span>
+                  </button>
+                </div>
+
+                {/* Auth Error Banner */}
+                {authError && (
+                  <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs sm:text-sm flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <div className="font-semibold">{authError}</div>
+                  </div>
+                )}
+
+                {/* TAB A: SIGN UP FORM */}
+                {authMode === 'signup' && (
+                  <form onSubmit={handleInlineSignUp} className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-1">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Title <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={authTitle}
+                          onChange={(e) => setAuthTitle(e.target.value as MinisterialTitle)}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium bg-white focus:ring-2 focus:ring-amber-500"
+                        >
+                          {MINISTERIAL_TITLES.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Full Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={authFullName}
+                          onChange={(e) => setAuthFullName(e.target.value)}
+                          placeholder="e.g. Samuel Bukunmi Adeleke"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                        />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-amber-700 shrink-0" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <span className="text-[11px] text-slate-500 block">Venue</span>
-                        <span className="font-semibold text-xs text-slate-900">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Email Address <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={authEmail}
+                            onChange={(e) => setAuthEmail(e.target.value)}
+                            placeholder="pastor@churchname.org"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Set Account Password <span className="text-red-500">*</span> (min 6 chars)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showAuthPassword ? 'text' : 'password'}
+                            value={authPassword}
+                            onChange={(e) => setAuthPassword(e.target.value)}
+                            placeholder="Create your password"
+                            className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                          <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                          <button
+                            type="button"
+                            onClick={() => setShowAuthPassword(!showAuthPassword)}
+                            className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showAuthPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Phone / WhatsApp Number <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            value={authPhone}
+                            onChange={(e) => setAuthPhone(e.target.value)}
+                            placeholder="+234 803 123 4567"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                          <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Church / Ministry Name <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={authChurch}
+                            onChange={(e) => setAuthChurch(e.target.value)}
+                            placeholder="e.g. Dominion Faith Bible Church"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                          <Church className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={authCity}
+                          onChange={(e) => setAuthCity(e.target.value)}
+                          placeholder="e.g. Abuja"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">State / Province</label>
+                        <input
+                          type="text"
+                          value={authState}
+                          onChange={(e) => setAuthState(e.target.value)}
+                          placeholder="e.g. FCT"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Country</label>
+                        <input
+                          type="text"
+                          value={authCountry}
+                          onChange={(e) => setAuthCountry(e.target.value)}
+                          placeholder="e.g. Nigeria"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <PassportPhotoSelector
+                        value={authPhoto}
+                        onChange={(photo) => setAuthPhoto(photo)}
+                        label="Member Passport Photo / Portrait (Optional for Badge)"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="w-full py-3.5 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-700 hover:to-amber-700 text-white font-bold text-base rounded-xl shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60"
+                    >
+                      {authLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Creating Account & Unlocking Form...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5" />
+                          <span>Sign Up & Unlock Accreditation Form</span>
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                {/* TAB B: SIGN IN FORM */}
+                {authMode === 'signin' && (
+                  <form onSubmit={handleInlineSignIn} className="space-y-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                        Member Email Address <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="email"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          placeholder="e.g. pastor@churchname.org"
+                          className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                          autoFocus
+                        />
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs sm:text-sm font-bold text-slate-700">
+                          Account Password <span className="text-red-500">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500">Your created password</span>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type={showAuthPassword ? 'text' : 'password'}
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                        />
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                        <button
+                          type="button"
+                          onClick={() => setShowAuthPassword(!showAuthPassword)}
+                          className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showAuthPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-base rounded-xl shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60"
+                    >
+                      {authLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Verifying Credentials...</span>
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="w-5 h-5" />
+                          <span>Sign In & Unlock Accreditation Form</span>
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+
+                    {/* Demo Accounts Quick Login */}
+                    {sampleMembers.length > 0 && (
+                      <div className="pt-4 border-t border-slate-100">
+                        <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          <span>One-Click Demo Member Logins:</span>
+                        </p>
+                        <div className="space-y-1.5">
+                          {sampleMembers.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => handleQuickDemoLogin(m.email)}
+                              className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 transition text-xs flex items-center justify-between group cursor-pointer"
+                            >
+                              <div className="truncate">
+                                <span className="font-bold text-slate-800">
+                                  {m.title} {m.fullName}
+                                </span>
+                                <span className="text-slate-500 text-[11px] block">{m.email}</span>
+                              </div>
+                              <span className="text-[11px] font-semibold text-amber-700 opacity-0 group-hover:opacity-100 transition">
+                                Select Demo →
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </form>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* STEP 2: VERIFIED MEMBER STATUS CARD */
+            <div className="bg-emerald-50 border-2 border-emerald-300 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                {currentMember.avatarUrl ? (
+                  <img
+                    src={currentMember.avatarUrl}
+                    alt=""
+                    className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-500 shadow-xs"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                    {currentMember.fullName.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold text-emerald-950">
+                      {currentMember.title} {currentMember.fullName}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[11px] font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" /> Member Authenticated
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                    {currentMember.churchName} • {currentMember.city}, {currentMember.country} • {currentMember.email}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-800 bg-white/80 px-3.5 py-1.5 rounded-xl border border-emerald-300 shadow-2xs">
+                  ✓ Form Unlocked & Ready
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Member's Existing Registrations Fast Access (if any) */}
+          {currentMember && memberRegistrations.length > 0 && (
+            <div className="bg-white border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-600" />
+                  <span>Your Previous Registrations ({memberRegistrations.length})</span>
+                </h3>
+                <span className="text-xs text-slate-500">Click any record to reprint confirmation</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {memberRegistrations.map((reg) => (
+                  <div
+                    key={reg.id}
+                    onClick={() => {
+                      if (onViewExistingRegistration) {
+                        onViewExistingRegistration(reg);
+                      } else {
+                        onRegistrationSuccess(reg);
+                      }
+                    }}
+                    className="p-3 bg-slate-50 hover:bg-amber-50/60 border border-slate-200 hover:border-amber-400 rounded-xl transition cursor-pointer flex items-center justify-between"
+                  >
+                    <div>
+                      <span className="font-mono text-xs font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
+                        {reg.id}
+                      </span>
+                      <p className="text-xs font-bold text-slate-800 mt-1">{reg.programmeTitle}</p>
+                      <p className="text-[11px] text-slate-500">Arrival: {reg.arrivalDate}</p>
+                    </div>
+                    <div className="text-xs font-bold text-amber-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                      View Letter →
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MAIN REGISTRATION FORM (ENABLED WHEN LOGGED IN) */}
+          {currentMember && (
+            <form onSubmit={handleSubmit} className="space-y-8 relative">
+              {/* SECTION 1: Personal and Ministerial Credentials */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
+                <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                    1
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Ministerial Identity & Credentials
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      These details will appear on your official Confirmation Letter and Delegate Badge.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Passport Photo Selector */}
+                <div className="mb-6">
+                  <PassportPhotoSelector
+                    value={passportPhotoUrl}
+                    onChange={(photo) => setPassportPhotoUrl(photo)}
+                    label="Official Passport Photo / Portrait for Delegate Badge (Optional)"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                  {/* Ministerial Title */}
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Title / Salutation <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value as MinisterialTitle)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-amber-500"
+                    >
+                      {MINISTERIAL_TITLES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Full Name */}
+                  <div className="sm:col-span-8">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Full Name (Surname First or Preferred) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="e.g. Samuel Bukunmi Adeleke"
+                        className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
+                          errors.fullName ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                        }`}
+                      />
+                      <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    </div>
+                    {errors.fullName && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> {errors.fullName}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Official Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="pastor@churchname.org"
+                        className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
+                          errors.email ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                        }`}
+                      />
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    </div>
+                    {errors.email && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> {errors.email}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+234 803 123 4567"
+                        className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
+                          errors.phone ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                        }`}
+                      />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    </div>
+                    {errors.phone && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> {errors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* WhatsApp */}
+                  <div className="sm:col-span-6">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-700">
+                        WhatsApp Number <span className="text-red-500">*</span>
+                      </label>
+                      {phone && (
+                        <button
+                          type="button"
+                          onClick={handleCopyPhoneToWhatsapp}
+                          className="text-[11px] text-amber-700 hover:underline cursor-pointer font-medium"
+                        >
+                          Copy from Phone
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        value={whatsapp}
+                        onChange={(e) => setWhatsapp(e.target.value)}
+                        placeholder="+234 803 123 4567"
+                        className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
+                          errors.whatsapp ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                        }`}
+                      />
+                      <MessageSquare className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    </div>
+                  </div>
+
+                  {/* Church Name */}
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Church / Ministry Name <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={churchName}
+                        onChange={(e) => setChurchName(e.target.value)}
+                        placeholder="e.g. Dominion Faith Bible Church"
+                        className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
+                          errors.churchName ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
+                        }`}
+                      />
+                      <Church className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    </div>
+                  </div>
+
+                  {/* Position */}
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Ministerial Role / Calling <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={ministerialPosition}
+                      onChange={(e) => setMinisterialPosition(e.target.value as MinisterialPosition)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-amber-500"
+                    >
+                      {MINISTERIAL_POSITIONS.map((pos) => (
+                        <option key={pos} value={pos}>
+                          {pos}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Denomination */}
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Denomination / Network (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={denomination}
+                      onChange={(e) => setDenomination(e.target.value)}
+                      placeholder="e.g. Pentecostal / Apostolic Network"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  {/* City, State, Country */}
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      City / Town <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Abuja"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      State / Province
+                    </label>
+                    <input
+                      type="text"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="e.g. FCT"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Country <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      placeholder="e.g. Nigeria"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: Programme Selection & Logistics */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
+                <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                    2
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Programme Selection & Convocation Schedule
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Select which programme you are registering for and confirm arrival dates.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Select Convocation Programme <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={programmeId}
+                      onChange={(e) => setProgrammeId(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:ring-2 focus:ring-amber-500"
+                    >
+                      {displayProgrammes.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title} ({p.startDate} - {p.endDate} • {p.city})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedProgramme && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50/80 to-amber-100/40 border border-amber-200 text-xs sm:text-sm text-slate-800 space-y-1.5">
+                      <div className="font-bold text-amber-950 font-serif text-sm sm:text-base">
+                        {selectedProgramme.title}
+                      </div>
+                      {selectedProgramme.theme && (
+                        <div className="italic text-amber-900 font-serif">
+                          Theme: "{selectedProgramme.theme}"
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-1">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-amber-700" />
+                          {selectedProgramme.startDate} to {selectedProgramme.endDate}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-amber-700" />
                           {selectedProgramme.venue}, {selectedProgramme.city}
                         </span>
                       </div>
                     </div>
+                  )}
 
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-amber-700 shrink-0" />
-                      <div>
-                        <span className="text-[11px] text-slate-500 block">Accredited Capacity</span>
-                        <span className="font-semibold text-xs text-slate-900">
-                          {selectedProgramme.registeredCount || 785} / {selectedProgramme.capacity || 1200} Ministers
-                        </span>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Expected Arrival Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={arrivalDate}
+                        onChange={(e) => setArrivalDate(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Departure Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        value={departureDate}
+                        onChange={(e) => setDepartureDate(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* SECTION 2: Minister Profile & Contact Credentials */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                2
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Ministerial Identification & Contact Channels
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Accreditation credentials, official title, and name badge data
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-6">
-              {/* Title */}
-              <div className="sm:col-span-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Ministerial Title / Salutation <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value as MinisterialTitle)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition text-sm"
-                >
-                  {MINISTERIAL_TITLES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
               </div>
 
-              {/* Full Name */}
-              <div className="sm:col-span-8">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Full Name (Surname First or Preferred) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Samuel Bukunmi Adeleke"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                    errors.fullName ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                  }`}
-                />
-                {errors.fullName && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.fullName}
-                  </p>
-                )}
-              </div>
-
-              {/* Email Address */}
-              <div className="sm:col-span-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Email Address (For Confirmation Letter Delivery) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="pastor@ministry.org"
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                      errors.email ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                    }`}
-                  />
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              {/* SECTION 3: Delegation Size & Additional Attendees */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
+                <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                    3
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Delegation Size & Accompanying Leaders
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Register accompanying associate pastors, choir leaders, or ministry delegates.
+                    </p>
+                  </div>
                 </div>
-                {errors.email && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.email}
-                  </p>
-                )}
-              </div>
 
-              {/* Phone Number */}
-              <div className="sm:col-span-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Primary Mobile Phone <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+234 803 123 4567"
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                      errors.phone ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                    }`}
-                  />
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                </div>
-                {errors.phone && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.phone}
-                  </p>
-                )}
-              </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Total Number of Attendees (Including Yourself)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="1"
+                        max="25"
+                        value={attendeesCount}
+                        onChange={(e) => handleAttendeesCountChange(parseInt(e.target.value) || 1)}
+                        className="w-28 px-3.5 py-2.5 rounded-xl border border-slate-300 text-base font-bold text-center focus:ring-2 focus:ring-amber-500"
+                      />
+                      <span className="text-xs text-slate-500">
+                        {attendeesCount === 1
+                          ? '1 Delegate (Yourself)'
+                          : `${attendeesCount} Delegates (You + ${attendeesCount - 1} Accompanying)`}
+                      </span>
+                    </div>
+                  </div>
 
-              {/* WhatsApp Number */}
-              <div className="sm:col-span-12">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-sm font-semibold text-slate-700">
-                    WhatsApp Number (For Programme Broadcasts & Arrival Updates){' '}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  {phone && (
-                    <button
-                      type="button"
-                      onClick={handleCopyPhoneToWhatsapp}
-                      className="text-xs text-amber-700 hover:text-amber-800 font-semibold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>Same as Phone</span>
-                    </button>
+                  {additionalAttendees.length > 0 && (
+                    <div className="pt-3 space-y-2 border-t border-slate-100">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Names of Accompanying Delegates for Badge Printing:
+                      </label>
+                      {additionalAttendees.map((name, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-400 w-6 text-right">
+                            #{idx + 2}
+                          </span>
+                          <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => handleAttendeeNameChange(idx, e.target.value)}
+                            placeholder={`e.g. Pastor John Doe (Associate Pastor)`}
+                            className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    placeholder="+234 803 123 4567"
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                      errors.whatsapp ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                    }`}
-                  />
-                  <MessageSquare className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                </div>
-                {errors.whatsapp && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.whatsapp}
-                  </p>
-                )}
               </div>
 
-              {/* Church / Ministry Name */}
-              <div className="sm:col-span-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Church / Ministry Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={churchName}
-                    onChange={(e) => setChurchName(e.target.value)}
-                    placeholder="e.g. Dominion Faith Bible Church"
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                      errors.churchName ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                    }`}
-                  />
-                  <Church className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              {/* SECTION 4: Special Requirements & Prayer Points */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
+                <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                    4
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Special Requirements & Prayer Requests
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Hospitality assistance and confidential prayer requests for the Presbytery
+                    </p>
+                  </div>
                 </div>
-                {errors.churchName && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.churchName}
-                  </p>
-                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Special Requirements (Accommodation Guidance, Protocol Pickup, Accessibility)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={specialRequirements}
+                      onChange={(e) => setSpecialRequirements(e.target.value)}
+                      placeholder="e.g. Seeking hotel recommendations in Maitama Abuja, wheelchair accessibility..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Confidential Prayer Requests (Submitted directly to the Intercessory Presbytery)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={prayerRequests}
+                      onChange={(e) => setPrayerRequests(e.target.value)}
+                      placeholder="e.g. Wisdom for church expansion, health and renewed fire upon the altar..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 transition"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Ministerial Position */}
-              <div className="sm:col-span-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Ministerial Role / Position <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={ministerialPosition}
-                  onChange={(e) => setMinisterialPosition(e.target.value as MinisterialPosition)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium focus:ring-2 focus:ring-amber-500 transition text-sm"
+              {/* In-Page Submit Action Bar */}
+              <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-amber-500/30 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Instant Accreditation Certification</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold font-serif text-white">
+                    Ready to Generate Your Official Confirmation Letter?
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Clicking below will issue your unique Registration ID and download-ready PDF document.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 text-base font-black rounded-2xl shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2.5 transition transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 shrink-0"
                 >
-                  {MINISTERIAL_POSITIONS.map((pos) => (
-                    <option key={pos} value={pos}>
-                      {pos}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {ministerialPosition === 'Other' && (
-                <div className="sm:col-span-12">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Specify Ministerial Role
-                  </label>
-                  <input
-                    type="text"
-                    value={customPosition}
-                    onChange={(e) => setCustomPosition(e.target.value)}
-                    placeholder="e.g. Presiding Overseer, Diocesan Chaplain, Missions Director"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              )}
-
-              {/* Passport Photo Capture / Upload Component */}
-              <div className="sm:col-span-12 pt-2 border-t border-slate-100">
-                <PassportPhotoSelector
-                  value={passportPhotoUrl}
-                  onChange={(photo) => setPassportPhotoUrl(photo)}
-                  label="Official Ministerial Headshot / Passport (For Gate Pass & Name Badge)"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 3: Location, Logistics & Attendees */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                3
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Location, Travel Logistics & Delegation Team
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Delegation size, arrival schedule, and seating arrangements
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
-              {/* City */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  City / Base <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g. Abuja / Ibadan / Lagos"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                    errors.city ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                  }`}
-                />
-                {errors.city && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.city}
-                  </p>
-                )}
-              </div>
-
-              {/* State */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  State / Province
-                </label>
-                <input
-                  type="text"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  placeholder="e.g. FCT / Oyo State"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 transition"
-                />
-              </div>
-
-              {/* Country */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Country <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  placeholder="e.g. Nigeria, Ghana, UK"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                    errors.country ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                  }`}
-                />
-                {errors.country && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.country}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Logistics & Attendees */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-slate-100">
-              {/* Arrival Date */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Expected Arrival Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={arrivalDate}
-                  onChange={(e) => setArrivalDate(e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-amber-500 transition ${
-                    errors.arrivalDate ? 'border-red-400 bg-red-50/20' : 'border-slate-300'
-                  }`}
-                />
-                {errors.arrivalDate && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.arrivalDate}
-                  </p>
-                )}
-              </div>
-
-              {/* Departure Date */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Departure Date
-                </label>
-                <input
-                  type="date"
-                  value={departureDate}
-                  onChange={(e) => setDepartureDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 transition"
-                />
-              </div>
-
-              {/* Total Attendees */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Total Attendees in Delegation
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max="25"
-                    value={attendeesCount}
-                    onChange={(e) => handleAttendeesCountChange(parseInt(e.target.value) || 1)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-center focus:ring-2 focus:ring-amber-500 transition"
-                  />
-                  <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
-                    Person(s)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Delegate Names */}
-            {attendeesCount > 1 && (
-              <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-xl space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  <Users className="w-4 h-4 text-amber-600" />
-                  <span>Names of Additional Ministers / Delegates in your Team</span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Lead delegate: <strong>{title} {fullName || '(Your Name)'}</strong>
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {additionalAttendees.map((name, idx) => (
-                    <div key={idx}>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Delegate #{idx + 2} Name & Title
-                      </label>
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => handleAttendeeNameChange(idx, e.target.value)}
-                        placeholder="e.g. Pastor John Doe"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs focus:ring-2 focus:ring-amber-500"
-                      />
+                  {submitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Processing Official Accreditation...</span>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Submit & Download Confirmation Letter</span>
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Sticky Floating Bottom Bar for Easy Submission */}
+              <div className="fixed bottom-0 left-0 right-0 z-30 bg-slate-950/90 backdrop-blur-md border-t border-amber-500/30 p-3 sm:p-4 shadow-2xl">
+                <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+                  <div className="hidden sm:flex items-center gap-2 text-white text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>
+                      Accrediting for: <strong>{selectedProgramme?.title}</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      onClick={onCancel}
+                      className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-semibold transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 sm:flex-initial px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 text-xs sm:text-sm font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {submitting ? (
+                        <span>Processing...</span>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Submit & Generate Letter (PDF)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* SECTION 4: Special Requirements & Prayer Points */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                4
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Special Requirements & Prayer Requests
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Hospitality assistance and confidential prayer requests for the Presbytery
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Special Requirements (Accommodation Guidance, Protocol Pickup, Accessibility)
-                </label>
-                <textarea
-                  rows={2}
-                  value={specialRequirements}
-                  onChange={(e) => setSpecialRequirements(e.target.value)}
-                  placeholder="e.g. Seeking hotel recommendations in Maitama Abuja, wheelchair accessibility..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Confidential Prayer Requests (Submitted directly to the Intercessory Presbytery)
-                </label>
-                <textarea
-                  rows={2}
-                  value={prayerRequests}
-                  onChange={(e) => setPrayerRequests(e.target.value)}
-                  placeholder="e.g. Wisdom for church expansion, health and renewed fire upon the altar..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="w-full sm:w-auto px-6 py-3 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl text-sm font-semibold transition cursor-pointer"
-            >
-              Back to Home
-            </button>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-700 hover:to-amber-700 text-white text-base font-bold rounded-xl shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50"
-            >
-              {submitting ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Processing Accreditation Credentials...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Complete Registration & Generate Official Letter</span>
-                </div>
-              )}
-            </button>
-          </div>
-        </form>
+            </form>
+          )}
+        </div>
       )}
 
       {/* ========================================================================= */}
@@ -1376,6 +1796,16 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Badge Modal Trigger if requested */}
+      {badgeModalRegistration && (
+        <MinisterBadgeModal
+          isOpen={!!badgeModalRegistration}
+          onClose={() => setBadgeModalRegistration(null)}
+          registration={badgeModalRegistration}
+          programme={programmes.find((p) => p.id === badgeModalRegistration.programmeId)}
+        />
       )}
     </div>
   );

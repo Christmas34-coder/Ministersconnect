@@ -57,6 +57,7 @@ export function App() {
   // Member Authentication State
   const [currentMember, setCurrentMember] = useState<MemberUser | null>(null);
   const [isMemberAuthModalOpen, setIsMemberAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup');
   const [authPromptMessage, setAuthPromptMessage] = useState<string | undefined>(undefined);
 
   // Selected states & Modals
@@ -98,7 +99,8 @@ export function App() {
   };
 
   // Auth Handlers
-  const handleOpenMemberAuth = (promptMsg?: string) => {
+  const handleOpenMemberAuth = (mode: 'signin' | 'signup' = 'signup', promptMsg?: string) => {
+    setAuthModalMode(mode);
     setAuthPromptMessage(promptMsg);
     setIsMemberAuthModalOpen(true);
   };
@@ -106,6 +108,7 @@ export function App() {
   const handleMemberAuthSuccess = (member: MemberUser) => {
     setCurrentMember(member);
     setIsMemberAuthModalOpen(false);
+    refreshData();
   };
 
   const handleMemberLogout = () => {
@@ -201,7 +204,15 @@ export function App() {
         registrationsCount={registrations.length}
         siteSettings={siteSettings}
         currentMember={currentMember}
-        onOpenMemberAuth={() => handleOpenMemberAuth('Please sign in with your email and password.')}
+        onOpenMemberAuth={(mode?: 'signin' | 'signup') => {
+          const targetMode = mode || 'signup';
+          handleOpenMemberAuth(
+            targetMode,
+            targetMode === 'signup'
+              ? 'Please create your member account with your own password to proceed.'
+              : 'Please sign in with your email and password.'
+          );
+        }}
         onMemberLogout={handleMemberLogout}
       />
 
@@ -266,9 +277,10 @@ export function App() {
                 onCancel={() => setActiveTab('home')}
                 currentMember={currentMember}
                 onRequestSignIn={() =>
-                  handleOpenMemberAuth('Please sign in with your email and password to complete your delegate registration.')
+                  handleOpenMemberAuth('signin', 'Please sign in with your email and password.')
                 }
                 onViewExistingRegistration={handleViewRegistrationLetter}
+                onMemberAuthSuccess={handleMemberAuthSuccess}
               />
             )}
 
@@ -278,7 +290,7 @@ export function App() {
                 onAddLeaderSuccess={handleAddLeaderSuccess}
                 currentMember={currentMember}
                 onRequestSignIn={() =>
-                  handleOpenMemberAuth('Please sign in with your member email and password to register as a Church Leader.')
+                  handleOpenMemberAuth('signup', 'Please sign up or sign in with your password to register as a Church Leader.')
                 }
               />
             )}
@@ -289,7 +301,7 @@ export function App() {
                 onAddSermonSuccess={handleAddSermonSuccess}
                 currentMember={currentMember}
                 onRequestSignIn={() =>
-                  handleOpenMemberAuth('Please sign in with your member account to upload sermon media and study notes.')
+                  handleOpenMemberAuth('signin', 'Please sign in with your member account to access study notes.')
                 }
               />
             )}
@@ -339,6 +351,7 @@ export function App() {
         isOpen={isMemberAuthModalOpen}
         onClose={() => setIsMemberAuthModalOpen(false)}
         onSuccess={handleMemberAuthSuccess}
+        initialMode={authModalMode}
         promptMessage={authPromptMessage}
       />
 

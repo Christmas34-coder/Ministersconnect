@@ -17,6 +17,7 @@ import {
   LogOut,
   BadgePercent,
   Download,
+  UserPlus,
 } from 'lucide-react';
 import { SiteSettings, MemberUser } from '../types';
 import { DEFAULT_SITE_SETTINGS } from '../data/seedData';
@@ -39,7 +40,7 @@ interface NavbarProps {
   registrationsCount: number;
   siteSettings?: SiteSettings;
   currentMember?: MemberUser | null;
-  onOpenMemberAuth: () => void;
+  onOpenMemberAuth: (initialMode?: 'signin' | 'signup') => void;
   onMemberLogout: () => void;
 }
 
@@ -105,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       )}
 
       {/* Top Ministerial Info Bar */}
-      <div className="bg-slate-900 text-slate-300 text-[11px] py-1 px-4 sm:px-8 flex justify-between items-center border-b border-slate-800">
+      <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-4 sm:px-8 flex justify-between items-center border-b border-slate-800">
         <div className="flex items-center gap-2 truncate">
           <span className="inline-flex items-center gap-1 text-amber-400 font-medium tracking-wide">
             <Sparkles className="w-3 h-3" /> {siteSettings.orgName}
@@ -116,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -126,11 +127,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenLookup();
               }
             }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold transition cursor-pointer text-[11px] border border-amber-500/40"
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold transition cursor-pointer text-[11px] border border-amber-500/40"
             title="Download your Minister Accreditation Badge"
           >
-            <BadgePercent className="w-3 h-3 text-amber-400" />
-            <span>Download Badge</span>
+            <BadgePercent className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden xs:inline">Download</span> Badge
           </button>
 
           <button
@@ -142,23 +143,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Find Registration</span>
           </button>
 
-          {/* Member Auth Header Button */}
+          {/* Member Auth Header Buttons */}
           {currentMember ? (
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 transition text-[11px] font-bold cursor-pointer border border-slate-700"
+                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 transition text-[11px] font-bold cursor-pointer border border-slate-700 shadow-2xs"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="truncate max-w-[110px]">
+                <span className="truncate max-w-[120px]">
                   {currentMember.title} {currentMember.fullName.split(' ')[0]}
                 </span>
               </button>
 
               {userDropdownOpen && (
-                <div className="absolute right-0 mt-1.5 w-56 bg-slate-900 rounded-xl shadow-xl border border-slate-800 p-1.5 z-50 text-slate-200">
-                  <div className="px-2.5 py-1.5 border-b border-slate-800 mb-1">
+                <div className="absolute right-0 mt-1.5 w-60 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-2 z-50 text-slate-200">
+                  <div className="px-3 py-2 border-b border-slate-800 mb-1">
                     <p className="font-bold text-xs text-white truncate">
                       {currentMember.title} {currentMember.fullName}
                     </p>
@@ -177,10 +178,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onOpenLookup();
                       }
                     }}
-                    className="w-full text-left px-2.5 py-1.5 text-xs text-amber-300 hover:bg-slate-800 rounded-lg flex items-center gap-2 cursor-pointer transition font-bold"
+                    className="w-full text-left px-3 py-2 text-xs text-amber-300 hover:bg-slate-800 rounded-xl flex items-center gap-2 cursor-pointer transition font-bold"
                   >
                     <BadgePercent className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Download Accreditation Badge</span>
+                    <span>Accreditation Badge</span>
                   </button>
                   <button
                     type="button"
@@ -188,7 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setUserDropdownOpen(false);
                       setActiveTab('register');
                     }}
-                    className="w-full text-left px-2.5 py-1.5 text-xs text-slate-300 hover:text-amber-300 hover:bg-slate-800 rounded-lg flex items-center gap-2 cursor-pointer transition"
+                    className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-amber-300 hover:bg-slate-800 rounded-xl flex items-center gap-2 cursor-pointer transition"
                   >
                     <UserCheck className="w-3.5 h-3.5 text-amber-400" />
                     <span>Register for Programme</span>
@@ -199,7 +200,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setUserDropdownOpen(false);
                       setActiveTab('leaders');
                     }}
-                    className="w-full text-left px-2.5 py-1.5 text-xs text-slate-300 hover:text-amber-300 hover:bg-slate-800 rounded-lg flex items-center gap-2 cursor-pointer transition"
+                    className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:text-amber-300 hover:bg-slate-800 rounded-xl flex items-center gap-2 cursor-pointer transition"
                   >
                     <Users className="w-3.5 h-3.5 text-amber-400" />
                     <span>Church Leaders Segment</span>
@@ -210,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setUserDropdownOpen(false);
                       onMemberLogout();
                     }}
-                    className="w-full text-left px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-950/40 rounded-lg flex items-center gap-2 mt-1 border-t border-slate-800 cursor-pointer transition"
+                    className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-950/40 rounded-xl flex items-center gap-2 mt-1 border-t border-slate-800 cursor-pointer transition"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out</span>
@@ -219,14 +220,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={onOpenMemberAuth}
-              className="flex items-center gap-1 text-amber-400 hover:text-amber-300 font-bold transition cursor-pointer text-[11px]"
-            >
-              <LogIn className="w-3 h-3" />
-              <span>Member Sign In</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onOpenMemberAuth('signup')}
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black transition cursor-pointer text-[11px] shadow-2xs"
+              >
+                <UserPlus className="w-3 h-3" />
+                <span>Sign Up</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onOpenMemberAuth('signin')}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold transition cursor-pointer text-[11px] border border-slate-700"
+              >
+                <LogIn className="w-3 h-3" />
+                <span>Sign In</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -304,10 +316,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Mobile & Tablet Right Controls */}
-          <div className="flex items-center gap-1.5 lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <button
               onClick={() => setActiveTab('register')}
-              className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg shadow-xs transition"
+              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-lg shadow-xs transition"
             >
               Register
             </button>
@@ -324,10 +336,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-slate-900 border-b border-slate-800 px-3 pt-2 pb-3 space-y-0.5 shadow-xl text-slate-200">
+        <div className="lg:hidden bg-slate-900 border-b border-slate-800 px-3 pt-2 pb-4 space-y-1 shadow-2xl text-slate-200">
           {/* Member status on mobile */}
           {currentMember ? (
-            <div className="p-2 bg-slate-800/90 rounded-lg mb-1.5 flex items-center justify-between border border-slate-700/80">
+            <div className="p-2.5 bg-slate-800/90 rounded-xl mb-2 flex items-center justify-between border border-slate-700/80">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                 <div className="truncate">
@@ -343,23 +355,37 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onMemberLogout();
                   setMobileMenuOpen(false);
                 }}
-                className="text-xs font-semibold text-red-400 hover:text-red-300 ml-2 shrink-0"
+                className="text-xs font-semibold text-red-400 hover:text-red-300 ml-2 shrink-0 bg-red-950/40 px-2 py-1 rounded-lg"
               >
                 Sign Out
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                onOpenMemberAuth();
-                setMobileMenuOpen(false);
-              }}
-              className="w-full py-1.5 px-3 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 mb-1.5 transition"
-            >
-              <LogIn className="w-3.5 h-3.5 text-amber-400" />
-              <span>Member Sign In (Email & Password)</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenMemberAuth('signup');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition shadow-sm"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Sign Up (New)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenMemberAuth('signin');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
+              >
+                <LogIn className="w-3.5 h-3.5 text-amber-400" />
+                <span>Sign In</span>
+              </button>
+            </div>
           )}
 
           {navItems.map((item) => {
@@ -373,7 +399,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setActiveTab(item.id);
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs font-medium transition cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-medium transition cursor-pointer ${
                   isActive
                     ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -384,12 +410,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>{item.label}</span>
                 </div>
                 {item.id === 'register' && (
-                  <span className="px-1.5 py-0.2 text-[9px] bg-amber-500 text-slate-950 rounded font-bold">
+                  <span className="px-2 py-0.5 text-[9px] bg-amber-500 text-slate-950 rounded-md font-bold">
                     Join
                   </span>
                 )}
                 {item.id === 'admin' && registrationsCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-800 text-amber-400 rounded text-[9px] font-bold border border-slate-700">
+                  <span className="px-2 py-0.5 bg-slate-800 text-amber-400 rounded-md text-[9px] font-bold border border-slate-700">
                     {registrationsCount}
                   </span>
                 )}
@@ -397,7 +423,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             );
           })}
 
-          <div className="pt-1.5 border-t border-slate-800 mt-1 space-y-1">
+          <div className="pt-2 border-t border-slate-800 mt-2 space-y-1.5">
             <button
               onClick={() => {
                 if (onOpenBadgeLookup) {
@@ -407,17 +433,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-amber-300 hover:text-amber-200 text-xs hover:bg-slate-800 rounded-lg transition font-semibold"
+              className="w-full flex items-center gap-2 px-3 py-2 text-amber-300 hover:text-amber-200 text-xs hover:bg-slate-800 rounded-xl transition font-bold bg-amber-500/10 border border-amber-500/20"
             >
-              <BadgePercent className="w-3.5 h-3.5 text-amber-400" />
+              <BadgePercent className="w-4 h-4 text-amber-400" />
               <span>Download Minister Accreditation Badge</span>
             </button>
+
             <button
               onClick={() => {
                 onOpenLookup();
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center gap-2 px-2.5 py-1 text-slate-400 hover:text-amber-300 text-xs hover:bg-slate-800 rounded-lg transition"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-amber-300 text-xs hover:bg-slate-800 rounded-xl transition"
             >
               <Search className="w-3.5 h-3.5 text-slate-400" />
               <span>Verify & Download Registration Letter</span>
