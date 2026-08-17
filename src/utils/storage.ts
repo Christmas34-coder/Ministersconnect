@@ -326,24 +326,78 @@ export function resetSiteSettingsToDefault(): SiteSettings {
 }
 
 // ADMIN USERS & ACCESS CONTROL
-export const PRIMARY_ADMIN_EMAIL = 'asamuelbukunmi@gmail.com';
+export const DEFAULT_PRIMARY_ADMIN_EMAIL = 'asamuelbukunmi@gmail.com';
+
+export function getPrimaryAdminEmail(): string {
+  try {
+    const settings = getSiteSettings();
+    if (settings && settings.primaryAdminEmail && settings.primaryAdminEmail.trim()) {
+      return settings.primaryAdminEmail.trim();
+    }
+  } catch (e) {
+    console.error('Error getting primary admin email:', e);
+  }
+  return DEFAULT_PRIMARY_ADMIN_EMAIL;
+}
+
+export const PRIMARY_ADMIN_EMAIL = DEFAULT_PRIMARY_ADMIN_EMAIL;
+
+export function updatePrimaryAdminEmail(newEmail: string): { success: boolean; error?: string } {
+  const cleanEmail = (newEmail || '').trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { success: false, error: 'A valid email address is required.' };
+  }
+
+  // Update site settings
+  updateSiteSettings({ primaryAdminEmail: cleanEmail });
+
+  // Update primary admin user account
+  const admins = getAdminUsers();
+  const primaryAdmin = admins.find((a) => a.isPrimaryOwner) || admins[0];
+  if (primaryAdmin) {
+    updateAdminUser(primaryAdmin.id, { email: cleanEmail });
+  }
+
+  const currentLogged = getCurrentAdmin();
+  if (currentLogged && currentLogged.isPrimaryOwner) {
+    setCurrentAdmin({ ...currentLogged, email: cleanEmail });
+  }
+
+  return { success: true };
+}
 
 export function getAdminUsers(): AdminUser[] {
   try {
     const data = localStorage.getItem(KEYS.ADMIN_USERS);
+    const primaryEmail = getPrimaryAdminEmail();
+
     if (!data) {
-      localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(INITIAL_ADMINS));
-      return INITIAL_ADMINS;
+      const initial = [{ ...INITIAL_ADMINS[0], email: primaryEmail }];
+      localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(initial));
+      return initial;
     }
+
     const admins: AdminUser[] = JSON.parse(data);
-    const owner = admins.find((a) => a.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase());
+    let owner = admins.find((a) => a.isPrimaryOwner || a.email.toLowerCase() === primaryEmail.toLowerCase());
+
     if (!owner) {
-      const updated = [INITIAL_ADMINS[0]];
+      owner = {
+        ...INITIAL_ADMINS[0],
+        email: primaryEmail,
+        isPrimaryOwner: true,
+      };
+      const updated = [owner, ...admins.filter((a) => !a.isPrimaryOwner)];
       localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(updated));
       return updated;
     }
-    // Only return authorized admin
-    return [owner];
+
+    // Keep primary owner email synced with site settings
+    if (owner.email.toLowerCase() !== primaryEmail.toLowerCase()) {
+      owner.email = primaryEmail;
+      localStorage.setItem(KEYS.ADMIN_USERS, JSON.stringify(admins));
+    }
+
+    return admins;
   } catch (e) {
     console.error('Error reading admin users from localStorage', e);
     return INITIAL_ADMINS;
@@ -388,7 +442,8 @@ export function updateAdminUser(id: string, updates: Partial<AdminUser>): AdminU
 export function deleteAdminUser(id: string): boolean {
   const current = getAdminUsers();
   const adminToDelete = current.find((a) => a.id === id);
-  if (!adminToDelete || adminToDelete.isPrimaryOwner || adminToDelete.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
+  const primaryEmail = getPrimaryAdminEmail().toLowerCase();
+  if (!adminToDelete || adminToDelete.isPrimaryOwner || adminToDelete.email.toLowerCase() === primaryEmail) {
     return false;
   }
   const filtered = current.filter((a) => a.id !== id);
@@ -421,20 +476,40 @@ export function authenticateAdmin(
 ): { success: boolean; admin?: AdminUser; error?: string } {
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedPass = passcode.trim();
+  const primaryEmail = getPrimaryAdminEmail().toLowerCase();
+  const admins = getAdminUsers();
+  const settings = getSiteSettings();
 
-  // Strict check: only asamuelbukunmi@gmail.com is authorized
-  if (trimmedEmail !== PRIMARY_ADMIN_EMAIL.toLowerCase()) {
+  // Find matching admin by email (either primary admin or team member)
+  const matchedAdmin = admins.find((a) => a.email.toLowerCase() === trimmedEmail);
+  const isPrimary = trimmedEmail === primaryEmail;
+
+  if (!matchedAdmin && !isPrimary) {
     return {
       success: false,
-      error: `Access Denied: The Admin Portal is strictly restricted to the primary administrator (${PRIMARY_ADMIN_EMAIL}). Unauthorized accounts cannot access or edit site records.`,
+      error: `Access Denied: Email "${email}" is not registered as an authorized administrator. Only registered secretariat administrators can access this portal.`,
     };
   }
 
-  const admins = getAdminUsers();
-  const owner = admins.find((a) => a.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) || INITIAL_ADMINS[0];
-  const settings = getSiteSettings();
+  const targetAdmin =
+    matchedAdmin ||
+    admins.find((a) => a.isPrimaryOwner || a.email.toLowerCase() === primaryEmail) ||
+    INITIAL_ADMINS[0];
 
-  const validPasscodes = [owner.passcode, settings.adminPasscode, 'admin123', 'admin'].filter(Boolean);
+  if (!targetAdmin.isActive && !targetAdmin.isPrimaryOwner) {
+    return {
+      success: false,
+      error: 'This administrator account has been disabled by the Super Admin.',
+    };
+  }
+
+  const validPasscodes = [
+    targetAdmin.passcode,
+    settings.adminPasscode,
+    'admin123',
+    'admin',
+  ].filter(Boolean);
+
   const isValid = validPasscodes.includes(trimmedPass);
 
   if (!isValid) {
@@ -444,10 +519,10 @@ export function authenticateAdmin(
     };
   }
 
-  updateAdminUser(owner.id, { lastLoginAt: new Date().toISOString() });
+  updateAdminUser(targetAdmin.id, { lastLoginAt: new Date().toISOString() });
   setAdminAuthenticated(true);
-  setCurrentAdmin(owner);
-  return { success: true, admin: owner };
+  setCurrentAdmin(targetAdmin);
+  return { success: true, admin: targetAdmin };
 }
 
 export function updatePrimaryAdminPasscode(newPasscode: string): { success: boolean; error?: string } {
@@ -461,8 +536,11 @@ export function updatePrimaryAdminPasscode(newPasscode: string): { success: bool
 
   // Update owner in admin list
   const admins = getAdminUsers();
-  const owner = admins.find((a) => a.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) || INITIAL_ADMINS[0];
-  updateAdminUser(owner.id, { passcode: cleanPass });
+  const primaryEmail = getPrimaryAdminEmail().toLowerCase();
+  const owner = admins.find((a) => a.isPrimaryOwner || a.email.toLowerCase() === primaryEmail) || admins[0];
+  if (owner) {
+    updateAdminUser(owner.id, { passcode: cleanPass });
+  }
   return { success: true };
 }
 

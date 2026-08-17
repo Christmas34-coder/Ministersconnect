@@ -80,7 +80,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <UserCheck className="w-5 h-5" />
-              <span>Register for August Programme</span>
+              <span>{siteSettings.heroRegisterButtonText || 'Register for August Programme'}</span>
             </button>
 
             <button
@@ -88,7 +88,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold text-sm sm:text-base border border-slate-700 transition cursor-pointer flex items-center justify-center gap-2"
             >
               <Eye className="w-5 h-5 text-amber-400" />
-              <span>View Official Flyer</span>
+              <span>{siteSettings.heroFlyerButtonText || 'View Official Flyer'}</span>
             </button>
           </div>
 
@@ -99,7 +99,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               className="text-xs sm:text-sm text-slate-400 hover:text-amber-300 transition inline-flex items-center gap-1.5 cursor-pointer underline underline-offset-4"
             >
               <Search className="w-3.5 h-3.5" />
-              <span>Already registered? Search & re-download your Confirmation Letter</span>
+              <span>{siteSettings.heroLookupButtonText || 'Already registered? Search & re-download your Confirmation Letter'}</span>
             </button>
           </div>
 
@@ -114,27 +114,39 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
           <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto border-t border-slate-800/80">
             <div className="p-3">
               <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-serif">
-                {totalMinistersCount > 0 ? `${totalMinistersCount}+` : '750+'}
+                {totalMinistersCount > 0
+                  ? `${totalMinistersCount}+`
+                  : siteSettings.heroStatsMinistersCount || '750+'}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">Accredited Ministers</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {siteSettings.heroStatsMinistersLabel || 'Accredited Ministers'}
+              </div>
             </div>
             <div className="p-3">
               <div className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
-                {totalProgrammesCount}
+                {totalProgrammesCount > 0
+                  ? totalProgrammesCount
+                  : siteSettings.heroStatsProgrammesCount || '1'}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">Active Programmes</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {siteSettings.heroStatsProgrammesLabel || 'Active Programmes'}
+              </div>
             </div>
             <div className="p-3">
               <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-serif">
-                100%
+                {siteSettings.heroStatsLettersCount || '100%'}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">Instant PDF Letters</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {siteSettings.heroStatsLettersLabel || 'Instant PDF Letters'}
+              </div>
             </div>
             <div className="p-3">
               <div className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
-                Fruit Fast
+                {siteSettings.heroStatsFastCount || 'Fruit Fast'}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">Consecrated Encounter</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {siteSettings.heroStatsFastLabel || 'Consecrated Encounter'}
+              </div>
             </div>
           </div>
         </div>
@@ -150,8 +162,12 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               onClick={() => setIsFlyerModalOpen(true)}
             >
               <img
-                src={MINISTERS_CONNECT_FLIER_PORTRAIT}
-                alt="Ministers Connect - Reigning in the Storm"
+                src={
+                  siteSettings.featuredProgramPosterUrl ||
+                  featuredProgramme?.imageUrl ||
+                  MINISTERS_CONNECT_FLIER_PORTRAIT
+                }
+                alt={featuredProgramme?.title || siteSettings.featuredProgramTitle || 'Ministers Connect'}
                 className="w-full h-auto object-cover group-hover:scale-102 transition duration-300"
                 referrerPolicy="no-referrer"
               />
@@ -182,21 +198,23 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
             <div>
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
                 <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300">
-                  Monthly Program
+                  {siteSettings.featuredProgramBadge || 'Monthly Program'}
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                  Maitama, Abuja (FCT)
+                  {siteSettings.featuredProgramLocation || 'Maitama, Abuja (FCT)'}
                 </span>
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-extrabold font-serif text-white leading-tight">
-                {featuredProgramme?.title || 'Ministers Connect Monthly Program: Reigning in the Storm'}
+                {featuredProgramme?.title ||
+                  siteSettings.featuredProgramTitle ||
+                  'Ministers Connect Monthly Program: Reigning in the Storm'}
               </h2>
 
               <p className="text-base sm:text-lg font-serif italic text-amber-300 mt-2 font-semibold">
-                Theme: "{featuredProgramme?.theme || 'REIGNING in the STORM — As Ministers of God, We Thrive in Trials'}"
+                Theme: "{featuredProgramme?.theme || siteSettings.featuredProgramTheme || 'REIGNING in the STORM — As Ministers of God, We Thrive in Trials'}"
               </p>
 
               {/* 4 Core Pillars */}
@@ -208,19 +226,19 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    <span><strong>1.</strong> Stay Rooted in God's Word</span>
+                    <span><strong>1.</strong> {siteSettings.pillar1Title || "Stay Rooted in God's Word"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    <span><strong>2.</strong> Stay Focused on His Purpose</span>
+                    <span><strong>2.</strong> {siteSettings.pillar2Title || "Stay Focused on His Purpose"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    <span><strong>3.</strong> Stay Fired by His Spirit</span>
+                    <span><strong>3.</strong> {siteSettings.pillar3Title || "Stay Fired by His Spirit"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    <span><strong>4.</strong> Stay Faithful in Every Season</span>
+                    <span><strong>4.</strong> {siteSettings.pillar4Title || "Stay Faithful in Every Season"}</span>
                   </div>
                 </div>
               </div>
@@ -230,15 +248,19 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 <div className="flex items-start gap-2 bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
                   <Calendar className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white block">Third Friday 21st - 22nd Aug 2026</strong>
-                    <span>9:00 AM to 12:00 PM Afternoon</span>
+                    <strong className="text-white block">
+                      {siteSettings.featuredProgramDates || 'Third Friday 21st - 22nd Aug 2026'}
+                    </strong>
+                    <span>{siteSettings.featuredProgramTime || '9:00 AM to 12:00 PM Afternoon'}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2 bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
                   <Clock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white block">Fruit Fast Protocol 🍇🍎🍌</strong>
+                    <strong className="text-white block">
+                      {siteSettings.featuredProgramFastProtocol || 'Fruit Fast Protocol 🍇🍎🍌'}
+                    </strong>
                     <span>All attendees will be on a Fruit Fast</span>
                   </div>
                 </div>
@@ -246,10 +268,17 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
 
               {/* Host & Hotlines */}
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 border-t border-slate-800 pt-3">
-                <span>Host: <strong className="text-white">Pastor John EZE</strong></span>
+                <span>
+                  Host: <strong className="text-white">{siteSettings.featuredProgramHost || 'Pastor John EZE'}</strong>
+                </span>
                 <span className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Enquiries: <strong className="text-amber-300">09110376410 | 08131587655 | 070 31216586</strong></span>
+                  <span>
+                    Enquiries:{' '}
+                    <strong className="text-amber-300">
+                      {siteSettings.featuredProgramHotlines || '09110376410 | 08131587655 | 070 31216586'}
+                    </strong>
+                  </span>
                 </span>
               </div>
             </div>
@@ -266,7 +295,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 }}
                 className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm rounded-xl transition shadow-md cursor-pointer flex items-center gap-2"
               >
-                <span>Register for August Programme</span>
+                <span>{siteSettings.featuredProgramRegisterBtnText || 'Register for August Programme'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -276,7 +305,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm rounded-xl transition border border-slate-700 cursor-pointer flex items-center gap-2"
               >
                 <Eye className="w-4 h-4 text-amber-400" />
-                <span>View Full Flyer</span>
+                <span>{siteSettings.featuredProgramFlyerBtnText || 'View Full Flyer'}</span>
               </button>
 
               <button
@@ -356,10 +385,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
             Our Ministerial Commitment
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif text-slate-900 mt-1">
-            Built for Apostolic Strength & Spiritual Refreshment
+            {siteSettings.pillarsSectionHeading || 'Built for Apostolic Strength & Spiritual Refreshment'}
           </h2>
           <p className="text-sm text-slate-600 mt-1.5 max-w-2xl mx-auto">
-            Supporting pastors, teachers, evangelists, and church leaders at every stage of their divine assignment.
+            {siteSettings.pillarsSectionSubtitle || 'Supporting pastors, teachers, evangelists, and church leaders at every stage of their divine assignment.'}
           </p>
         </div>
 
@@ -369,10 +398,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               <Church className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900 font-serif mb-1">
-              Stay Rooted in the Word
+              {siteSettings.pillar1Title || 'Stay Rooted in the Word'}
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Prophetic impartation, sound New Testament doctrine, and ministerial brotherhood to fortify your spirit in trials.
+              {siteSettings.pillar1Desc || 'Prophetic impartation, sound New Testament doctrine, and ministerial brotherhood to fortify your spirit in trials.'}
             </p>
           </div>
 
@@ -381,10 +410,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               <HeartHandshake className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900 font-serif mb-1">
-              Stay Focused on Purpose
+              {siteSettings.pillar2Title || 'Stay Focused on Purpose'}
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Ministers endurance, divine vision alignment, pastoral care, and fruit fasting consecration.
+              {siteSettings.pillar2Desc || 'Ministers endurance, divine vision alignment, pastoral care, and fruit fasting consecration.'}
             </p>
           </div>
 
@@ -393,10 +422,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               <Flame className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900 font-serif mb-1">
-              Stay Fired by the Spirit
+              {siteSettings.pillar3Title || 'Stay Fired by the Spirit'}
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Spiritual stamina, apostolic fire, prophetic prayers, and fresh anointing upon your ministerial altar.
+              {siteSettings.pillar3Desc || 'Spiritual stamina, apostolic fire, prophetic prayers, and fresh anointing upon your ministerial altar.'}
             </p>
           </div>
 
@@ -405,10 +434,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               <ShieldCheck className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900 font-serif mb-1">
-              Stay Faithful in Every Season
+              {siteSettings.pillar4Title || 'Stay Faithful in Every Season'}
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              "Storms don't last. Our calling does." Continuous accreditation, digital certificates, and fellowship support.
+              {siteSettings.pillar4Desc || '"Storms don\'t last. Our calling does." Continuous accreditation, digital certificates, and fellowship support.'}
             </p>
           </div>
         </div>

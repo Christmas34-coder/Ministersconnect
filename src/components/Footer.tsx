@@ -37,16 +37,17 @@ export const Footer: React.FC<FooterProps> = ({
                 <Flame className="w-5 h-5 fill-slate-950" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white font-serif">
-                {siteSettings.orgName}
+                {siteSettings.footerAboutTitle || siteSettings.orgName}
               </span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
-              {siteSettings.heroSubtitle ||
+              {siteSettings.footerAboutText ||
+                siteSettings.heroSubtitle ||
                 'A sacred programme and global relational network fostering apostolic alignment, pastoral care, leadership equipping, and unity across the Body of Christ.'}
             </p>
-            {siteSettings.heroScriptureQuote && (
+            {(siteSettings.footerQuoteText || siteSettings.heroScriptureQuote) && (
               <div className="pt-2 text-xs text-amber-400/90 italic font-serif border-l-2 border-amber-500 pl-3">
-                "{siteSettings.heroScriptureQuote}"
+                "{siteSettings.footerQuoteText || siteSettings.heroScriptureQuote}"
               </div>
             )}
           </div>
@@ -54,7 +55,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 2: Quick Links */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">
-              Navigation & Access
+              {siteSettings.footerNavigationTitle || 'Navigation & Access'}
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
@@ -132,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 3: Ministers Connect Headquarters & Contact */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">
-              Ministers Connect Headquarters
+              {siteSettings.footerHeadquartersTitle || 'Ministers Connect Headquarters'}
             </h4>
             <ul className="space-y-3 text-sm text-slate-400">
               <li className="flex items-start gap-2.5">
@@ -159,18 +160,19 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 4: Delegate Assistance & Rights */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">
-              Accreditation Notice & Rights
+              {siteSettings.footerNoticeTitle || 'Accreditation Notice & Rights'}
             </h4>
             <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
               <p className="text-xs text-slate-400 leading-relaxed">
-                {siteSettings.accreditationRightsNotice ||
+                {siteSettings.footerNoticeText ||
+                  siteSettings.accreditationRightsNotice ||
                   'Every registered minister receives an official Confirmation of Registration Letter with a unique Registration ID for express security and tag issuance at the venue.'}
               </p>
               <button
                 onClick={() => onNavigate('register')}
                 className="w-full py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition shadow cursor-pointer text-center"
               >
-                Register Now
+                {siteSettings.footerNoticeBtnText || 'Register Now'}
               </button>
             </div>
           </div>
@@ -179,12 +181,13 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>
-            {siteSettings.copyrightNotice ||
+            {siteSettings.footerCopyrightNotice ||
+              siteSettings.copyrightNotice ||
               `© ${new Date().getFullYear()} Ministers Connect Global. All rights reserved.`}
           </p>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1 text-slate-400">
-              Dedicated to Kingdom Unity{' '}
+              {siteSettings.footerDedicatedText || 'Dedicated to Kingdom Unity'}{' '}
               <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
             </span>
             <span>•</span>

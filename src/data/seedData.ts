@@ -449,7 +449,11 @@ export const INITIAL_GALLERY: GalleryItem[] = [
 ];
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
-  // General Branding
+  // Master Administrative Email & Security
+  primaryAdminEmail: 'asamuelbukunmi@gmail.com',
+  adminPasscode: 'admin123',
+
+  // General Branding & Logos
   orgName: 'MINISTERS CONNECT',
   orgTagline: 'MONTHLY PROGRAM — REIGNING IN THE STORM (AS MINISTERS OF GOD, WE THRIVE IN TRIALS)',
   orgShortCode: 'MINISTERS CONNECT',
@@ -467,6 +471,45 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     'Third Friday 21st August 2026 (9:00 AM) to 22nd August (12:00 PM Afternoon) • Maitama, Abuja • Host: Pastor John EZE',
   heroBannerImageUrl: MINISTERS_CONNECT_FLIER_LANDSCAPE,
   heroOverlayOpacity: 85,
+  heroRegisterButtonText: 'Register for August Programme',
+  heroFlyerButtonText: 'View Official Flyer',
+  heroLookupButtonText: 'Already registered? Search & re-download your Confirmation Letter',
+
+  // Hero Stats Labels & Values
+  heroStatsMinistersCount: '750+',
+  heroStatsMinistersLabel: 'Accredited Ministers',
+  heroStatsProgrammesCount: '1',
+  heroStatsProgrammesLabel: 'Active Programmes',
+  heroStatsLettersCount: '100%',
+  heroStatsLettersLabel: 'Instant PDF Letters',
+  heroStatsFastCount: 'Fruit Fast',
+  heroStatsFastLabel: 'Consecrated Encounter',
+
+  // Featured Programme Showcase Card (Words & Poster Image)
+  featuredProgramBadge: 'Monthly Program',
+  featuredProgramLocation: 'Maitama, Abuja (FCT)',
+  featuredProgramTitle: 'Ministers Connect Monthly Program: Reigning in the Storm',
+  featuredProgramTheme: 'REIGNING in the STORM — As Ministers of God, We Thrive in Trials',
+  featuredProgramPosterUrl: MINISTERS_CONNECT_FLIER_PORTRAIT,
+  featuredProgramDates: 'Third Friday 21st - 22nd Aug 2026',
+  featuredProgramTime: '9:00 AM to 12:00 PM Afternoon',
+  featuredProgramFastProtocol: 'Fruit Fast Protocol 🍇🍎🍌 (All attendees will be on a Fruit Fast)',
+  featuredProgramHost: 'Pastor John EZE',
+  featuredProgramHotlines: '09110376410 | 08131587655 | 070 31216586',
+  featuredProgramRegisterBtnText: 'Register for August Programme',
+  featuredProgramFlyerBtnText: 'View Full Flyer',
+
+  // The 4 Core Ministerial Pillars (Words & Descriptions)
+  pillarsSectionHeading: 'Built for Apostolic Strength & Spiritual Refreshment',
+  pillarsSectionSubtitle: 'Supporting pastors, teachers, evangelists, and church leaders at every stage of their divine assignment.',
+  pillar1Title: 'Stay Rooted in the Word',
+  pillar1Desc: 'Prophetic impartation, sound New Testament doctrine, and ministerial brotherhood to fortify your spirit in trials.',
+  pillar2Title: 'Stay Focused on Purpose',
+  pillar2Desc: 'Ministers endurance, divine vision alignment, pastoral care, and fruit fasting consecration.',
+  pillar3Title: 'Stay Fired by the Spirit',
+  pillar3Desc: 'Spiritual stamina, apostolic fire, prophetic prayers, and fresh anointing upon your ministerial altar.',
+  pillar4Title: 'Stay Faithful in Every Season',
+  pillar4Desc: '"Storms don\'t last. Our calling does." Continuous accreditation, digital certificates, and fellowship support.',
 
   // Announcement Top Bar
   announcementActive: true,
@@ -522,12 +565,23 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   supportPhone: '09110376410 | 08131587655 | 070 31216586',
   whatsappContact: '09110376410',
 
+  // Footer Specific Wording
+  footerAboutTitle: 'Ministers Connect',
+  footerAboutText:
+    'A sacred programme and global relational network fostering apostolic alignment, pastoral care, leadership equipping, and unity across the Body of Christ.',
+  footerQuoteText: 'Storms don\'t last. Our calling does.',
+  footerNavigationTitle: 'Navigation & Access',
+  footerHeadquartersTitle: 'Ministers Connect Headquarters',
+  footerNoticeTitle: 'Accreditation Notice & Rights',
+  footerNoticeText:
+    'Every registered minister receives an official Confirmation of Registration Letter with a unique Registration ID for express security and tag issuance at the venue.',
+  footerNoticeBtnText: 'Register Now',
+  footerCopyrightNotice: '© 2026 Ministers Connect Global. All rights reserved.',
+  footerDedicatedText: 'Dedicated to Kingdom Unity',
+
   // Terminology & Naming Customization
   programmeTermSingular: 'Programme',
   programmeTermPlural: 'Programmes',
-
-  // Security / Admin Access
-  adminPasscode: 'admin123',
 };
 
 export const CURATED_PRESET_IMAGES = [

@@ -231,7 +231,11 @@ export interface RegistrationFilters {
 }
 
 export interface SiteSettings {
-  // General Branding
+  // Master Administrative Email & Security
+  primaryAdminEmail?: string; // Editable master admin login email (default: asamuelbukunmi@gmail.com)
+  adminPasscode: string;
+
+  // General Branding & Logos
   orgName: string;
   orgTagline: string;
   orgShortCode: string;
@@ -246,6 +250,45 @@ export interface SiteSettings {
   heroScriptureRef: string;
   heroBannerImageUrl: string;
   heroOverlayOpacity: number;
+  heroRegisterButtonText?: string;
+  heroFlyerButtonText?: string;
+  heroLookupButtonText?: string;
+
+  // Hero Stats Labels
+  heroStatsMinistersCount?: string;
+  heroStatsMinistersLabel?: string;
+  heroStatsProgrammesCount?: string;
+  heroStatsProgrammesLabel?: string;
+  heroStatsLettersCount?: string;
+  heroStatsLettersLabel?: string;
+  heroStatsFastCount?: string;
+  heroStatsFastLabel?: string;
+
+  // Featured Programme Showcase Card (Words & Poster Image)
+  featuredProgramBadge?: string;
+  featuredProgramLocation?: string;
+  featuredProgramTitle?: string;
+  featuredProgramTheme?: string;
+  featuredProgramPosterUrl?: string;
+  featuredProgramDates?: string;
+  featuredProgramTime?: string;
+  featuredProgramFastProtocol?: string;
+  featuredProgramHost?: string;
+  featuredProgramHotlines?: string;
+  featuredProgramRegisterBtnText?: string;
+  featuredProgramFlyerBtnText?: string;
+
+  // The 4 Core Ministerial Pillars (Words & Descriptions)
+  pillarsSectionHeading?: string;
+  pillarsSectionSubtitle?: string;
+  pillar1Title?: string;
+  pillar1Desc?: string;
+  pillar2Title?: string;
+  pillar2Desc?: string;
+  pillar3Title?: string;
+  pillar3Desc?: string;
+  pillar4Title?: string;
+  pillar4Desc?: string;
 
   // Announcement Top Bar
   announcementActive: boolean;
@@ -287,10 +330,19 @@ export interface SiteSettings {
   supportPhone: string;
   whatsappContact: string;
 
+  // Footer Specific Wording
+  footerAboutTitle?: string;
+  footerAboutText?: string;
+  footerQuoteText?: string;
+  footerNavigationTitle?: string;
+  footerHeadquartersTitle?: string;
+  footerNoticeTitle?: string;
+  footerNoticeText?: string;
+  footerNoticeBtnText?: string;
+  footerCopyrightNotice?: string;
+  footerDedicatedText?: string;
+
   // Terminology & Naming Customization
   programmeTermSingular?: string; // e.g. "Programme", "Summit", "Monthly Program"
   programmeTermPlural?: string; // e.g. "Programmes", "Summits", "Gatherings"
-
-  // Security / Admin Access
-  adminPasscode: string;
 }
